@@ -1,0 +1,7 @@
+IHaskell/
+pyQuil/
+*.tmp
+tmp/
+*.sw?
+.*/
+.pyquil_config
