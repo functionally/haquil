@@ -5,3 +5,6 @@ tmp/
 *.sw?
 .*/
 .pyquil_config
+.cabal-sandbox/
+dist/
+cabal.sandbox.config
