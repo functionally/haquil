@@ -1,5 +1,5 @@
 name               : quil
-version            : 0.1.2.0
+version            : 0.1.3.0
 synopsis           : A Haskell implementation of the Quil instruction set for quantum computing.
 description        : This Haskell library implements the Quil language for quantum computing, as specified in "A Practical Quantum Instruction Set Architecture" \<https://arxiv.org/abs/1608.03355/\>.
 
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules  : Data.Qubit
+                     Data.Qubit.Gate
   other-modules    : Data.Int.Util
   hs-source-dirs   : src
   build-depends    : base >= 4.9 && < 4.10
