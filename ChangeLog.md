@@ -2,6 +2,10 @@
 
 ## 0.1.4.0  -- 2017-12-15
 
+* tested two- and three-qubit gates
+
+## 0.1.4.0  -- 2017-12-15
+
 * renamed product operators
 * tested one-qubit gates
 

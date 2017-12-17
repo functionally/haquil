@@ -110,8 +110,8 @@ type Amplitude = Complex Double
 showAmplitude :: Amplitude -> String
 showAmplitude (a :+ b)
   | b == 0    = show a
-  | a == 0    = show b ++ "j"
-  | otherwise = "(" ++ show a ++ "+" ++ show b ++ "j)"
+  | a == 0    = show b ++ "i"
+  | otherwise = "(" ++ show a ++ "+" ++ show b ++ "i)"
 
 
 -- | Show a state and its amplitude.
