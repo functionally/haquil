@@ -21,8 +21,8 @@ module Data.Qubit (
   QIndex
 , QState(..)
 , Amplitude
-, Wavefunction
-, Operator
+, Wavefunction(rawWavefunction)
+, Operator(rawOperator)
 -- * Construction
 , qubit
 , qubits
@@ -36,9 +36,9 @@ module Data.Qubit (
 , operatorIndices
 , operatorAmplitudes
 -- * Operations
-, (.*.)
-, (.*)
-, (..*)
+, (^*^)
+, (^*)
+, (^^*)
 ) where
 
 
@@ -160,31 +160,31 @@ tensorAmplitudes x =
 
 
 -- | A wavefunction for qubits.
-newtype Wavefunction = Wavefunction {wavefunction :: Tensor Amplitude}
+newtype Wavefunction = Wavefunction {rawWavefunction :: Tensor Amplitude}
   deriving (Eq, Floating, Fractional, Num)
 
 instance Show Wavefunction where
   show =
-    showTensor wavefunction
+    showTensor rawWavefunction
       $ \_ (k, v) ->
       showAmplitude v ++ "|" ++ concatMap show k ++ ">"
 
 
 -- | Number of qubits in a wavefunction.
 wavefunctionOrder :: Wavefunction -> Int
-wavefunctionOrder = order . wavefunction
+wavefunctionOrder = order . rawWavefunction
 
 
 -- | Qubit indices in a wavefunction.
 wavefunctionIndices :: Wavefunction -- ^ The wavefunction.
                     -> [QIndex]     -- ^ List of qubit indices.
-wavefunctionIndices = tensorIndices . wavefunction
+wavefunctionIndices = tensorIndices . rawWavefunction
 
 
 -- | Amplitudes of states in a qubit wavefunction.
 wavefunctionAmplitudes :: Wavefunction            -- ^ The wavefunction.
                        -> [([QState], Amplitude)] -- ^ List of qubit states and their amplitudes.
-wavefunctionAmplitudes = tensorAmplitudes . wavefunction
+wavefunctionAmplitudes = tensorAmplitudes . rawWavefunction
 
 
 -- | Construct a qubit from the amplitudes of its states.
@@ -222,28 +222,28 @@ groundState = qubits . (1 :) . (`replicate` 0) . (+ (-1)) . (2^)
 
 
 -- | An operator on wavefunctions.
-newtype Operator = Operator {operator :: Tensor (Complex Double)}
+newtype Operator = Operator {rawOperator :: Tensor (Complex Double)}
   deriving (Eq, Floating, Fractional, Num)
 
 instance Show Operator where
   show =
-    showTensor operator
+    showTensor rawOperator
       $ \n (k, v) ->
       let
-        (k0, k1) = splitAt (n `div` 2) $ concatMap show k
+        (kc, kr) = splitAt (n `div` 2) $ concatMap show k
       in
-        showAmplitude v ++ "|" ++ k0 ++ "><" ++ k1 ++ "|"
+        showAmplitude v ++ "|" ++ kr ++ "><" ++ kc ++ "|"
 
 
 -- | Number of qubits for an operator.
 operatorOrder :: Operator -> Int
-operatorOrder = isqrt . order . operator
+operatorOrder = isqrt . order . rawOperator
 
 
 -- | Qubit indices in an operator.
 operatorIndices :: Operator -- ^ The operator.
                 -> [QIndex] -- ^ List of qubit indices.
-operatorIndices = tensorIndices . operator
+operatorIndices = tensorIndices . rawOperator
 
 
 -- | Amplitudes of state transitions in a qubit operator.
@@ -291,15 +291,15 @@ mult x y =
 
 
 -- | Apply two operators in sequence.
-(.*.) :: Operator -> Operator -> Operator
-Operator x .*. Operator y = Operator $ x `mult` y
+(^*^) :: Operator -> Operator -> Operator
+Operator x ^*^ Operator y = Operator $ x `mult` y
 
 
 -- | Apply an operator to a wavefunction.
-(.*) :: Operator -> Wavefunction -> Wavefunction
-Operator x .* Wavefunction y = Wavefunction $ x `mult` y
+(^*) :: Operator -> Wavefunction -> Wavefunction
+Operator x ^* Wavefunction y = Wavefunction $ x `mult` y
 
 
 -- | Apply a sequence of operators to a wavefunction.
-(..*) :: Foldable t => t Operator -> Wavefunction -> Wavefunction
-(..*) = flip . foldl $ flip (.*)
+(^^*) :: Foldable t => t Operator -> Wavefunction -> Wavefunction
+(^^*) = flip . foldl $ flip (^*)
