@@ -44,16 +44,21 @@ module Data.Qubit (
 , (*^)
 , (^^*)
 , (*^^)
+, project
+, measure
+, wavefunctionProbability
 ) where
 
 
 import Control.Arrow (first)
 import Control.Monad (replicateM)
+import Control.Monad.Random.Lazy (Rand, RandomGen)
 import Data.Complex (Complex(..))
 import Data.Int.Util (ilog2, isqrt)
 import Data.List (intersect, intercalate, sortBy)
-import Numeric.LinearAlgebra.Array.Util (coords, names, order, outers, renameExplicit, reorder)
-import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), listTensor)
+import Numeric.LinearAlgebra.Array ((.*))
+import Numeric.LinearAlgebra.Array.Util (asScalar, coords, names, order, outers, renameExplicit, reorder)
+import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), listTensor, switch)
 
 import qualified Data.Vector.Storable as V (toList)
 
@@ -349,22 +354,59 @@ infixr 7 ^*^
 -- | Apply an operator to a wavefunction.
 (^*) :: Operator -> Wavefunction -> Wavefunction
 Operator x ^* Wavefunction y = Wavefunction $ x `mult` y
-infixr 6 *^
+infixr 6 ^*
 
 
 -- | Apply an operator to a wavefunction.
 (*^) :: Wavefunction -> Operator -> Wavefunction
 (*^) = flip (^*)
-infixl 6 ^*
+infixl 6 *^
 
 
 -- | Apply a sequence of operators to a wavefunction.
 (^^*) :: Foldable t => t Operator -> Wavefunction -> Wavefunction
 (^^*) = flip . foldl $ flip (^*)
-infixr 6 *^^
+infixr 6 ^^*
 
 
 -- | Apply a sequence of operators to a wavefunction.
 (*^^) :: Foldable t => Wavefunction -> t Operator -> Wavefunction
 (*^^) = flip (^^*)
-infixl 6 ^^*
+infixl 6 *^^
+
+
+-- | Project a wavefunction onto a particular state.
+project :: [(QIndex, QState)] -- ^ The qubits for the state.
+        -> Wavefunction       -- ^ The wavefunction.
+        -> Wavefunction       -- ^ The projected wavefunction.
+project states x =
+  let
+    y = canonicalOrder $ rawWavefunction' x
+    p =
+      canonicalOrder
+        . outers
+        $ fmap rawWavefunction'
+        [
+          case i `lookup` states of
+            Nothing -> qubit i (1, 1)
+            Just s  -> pureQubit i s
+        |
+          i <- [0..(order y - 1)]
+        ]
+    z = p .* y
+  in
+    Wavefunction $ z / sqrt (z * switch z)
+
+
+-- | Measure qubits in a wavefunction
+measure :: RandomGen g
+        => [QIndex]                                  -- ^ Which qubits to measure.
+        -> Wavefunction                              -- ^ The wavefunction.
+        -> Rand g ([(QIndex, QState)], Wavefunction) -- ^ Action for the resulting measurement and wavefunction.
+measure = undefined
+
+
+-- | The total probability for the wave function, which should be 1.
+wavefunctionProbability :: Wavefunction
+                        -> Amplitude
+wavefunctionProbability (Wavefunction x) = asScalar $ x * switch x
