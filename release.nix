@@ -7,7 +7,7 @@ let
         packages = pkgs.haskell.packages // {
           "${compiler}" = pkgs.haskell.packages."${compiler}".override {
             overrides = haskellPackagesNew: haskellPackagesOld: rec {
-              quil = haskellPackagesNew.callPackage ./default.nix { };
+              haquil = haskellPackagesNew.callPackage ./default.nix { };
             };
           };
         };
@@ -19,5 +19,5 @@ let
 
 in
   {
-    quil = pkgs.haskell.packages.${compiler}.quil;
+    haquil = pkgs.haskell.packages.${compiler}.haquil;
   }

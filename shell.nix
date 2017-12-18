@@ -1,1 +1,1 @@
-((import ./release.nix) {}).quil.env
+((import ./release.nix) {}).haquil.env

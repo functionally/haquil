@@ -2,14 +2,14 @@
 , template-haskell, vector
 }:
 mkDerivation {
-  pname = "quil";
-  version = "0.1.6.0";
+  pname = "haquil";
+  version = "0.1.7.2";
   src = ./.;
   libraryHaskellDepends = [ base hTensor MonadRandom vector ];
   testHaskellDepends = [
     base hTensor MonadRandom QuickCheck template-haskell vector
   ];
-  homepage = "https://bitbucket.org/functionally/quil";
+  homepage = "https://bitbucket.org/functionally/haquil";
   description = "A Haskell implementation of the Quil instruction set for quantum computing";
   license = stdenv.lib.licenses.mit;
 }
