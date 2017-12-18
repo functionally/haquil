@@ -8,7 +8,7 @@
 -- Stability   :  Stable
 -- Portability :  Portable
 --
--- | Qubits and operations on them.
+-- | Qubits and operations on them, using the indexing conventions of \<<https://arxiv.org/abs/1711.02086/>\>.
 --
 -----------------------------------------------------------------------------
 
@@ -131,14 +131,14 @@ type ShowState =  Int                   -- ^ Number of qubits in the state.
                -> String                -- ^ The string representation.
 
 
--- | Help to ompactly show a tensor.
+-- | Help to compactly show a tensor.
 showTensor :: (a -> Tensor Amplitude) -- ^ Function for extracting the tensor of amplitudes.
            -> ShowState               -- ^ Function for showing a state and its amplitude.
            -> a                       -- ^ What to show.
            -> String                  -- ^ The string respresentation.
 showTensor toTensor format x =
     let
-      x' = toTensor x
+      x' = canonicalOrder $ toTensor x
       n = order x'
     in
       (++ (show $ tensorIndices x'))
@@ -153,7 +153,8 @@ showTensor toTensor format x =
 tensorIndices :: Tensor Amplitude -- ^ The tensor.
               -> [QIndex]         -- ^ The qubit indices.
 tensorIndices =
-  fmap (read . tail)
+  reverse
+    . fmap (read . tail)
     . filter ((== indexPrefix Contra) . head)
     . names
 
@@ -170,15 +171,14 @@ canonicalOrder x =
 
 -- | Amplitudes in a tensor.
 tensorAmplitudes :: Tensor Amplitude        -- ^ The tensor.
-                 -> [([QState], Amplitude)] -- ^ List of qubit states and their amplitudes, where states are ordered from higher indices to lower ones.
+                 -> [([QState], Amplitude)] -- ^ List of qubit states and their amplitudes, where indices of states are ordered according to 'tensorIndices'.
 tensorAmplitudes x =
   let
     n = order x
   in
     zip (replicateM n [minBound..maxBound])
       . V.toList
-     . coords
-     $ canonicalOrder x
+     $ coords x
 
 
 -- | A wavefunction for qubits.
@@ -210,7 +210,7 @@ wavefunctionIndices = tensorIndices . rawWavefunction'
 
 -- | Amplitudes of states in a qubit wavefunction.
 wavefunctionAmplitudes :: Wavefunction            -- ^ The wavefunction.
-                       -> [([QState], Amplitude)] -- ^ List of qubit states and their amplitudes, where states are ordered from higher indices to lower ones.
+                       -> [([QState], Amplitude)] -- ^ List of qubit states and their amplitudes, where indices of states are ordered according to 'wavefunctionIndices'.
 wavefunctionAmplitudes = tensorAmplitudes . rawWavefunction'
 
 
@@ -303,7 +303,7 @@ operatorIndices = tensorIndices . rawOperator'
 
 -- | Amplitudes of state transitions in a qubit operator.
 operatorAmplitudes :: Operator                            -- ^ The wavefunction.
-                   -> [(([QState], [QState]), Amplitude)] -- ^ List of qubit state transitions and their amplitudes, in row-major order with the states ordered from higher indices to lower ones.
+                   -> [(([QState], [QState]), Amplitude)] -- ^ List of qubit state transitions and their amplitudes, in row-major order with the states ordered according to 'operatorIndices'.
 operatorAmplitudes (Operator x) =
   let
     x' = tensorAmplitudes x
@@ -314,13 +314,13 @@ operatorAmplitudes (Operator x) =
 
 -- | Construct an operator on qubit wavefunctions.
 --
--- Amplitudes in row-major order where qubit states are ordered so that the 0 state appears before the 1 state and the lower qubit indices cycle faster than then higher qubit indices. For example, a three-qubit operator has its amplitudes ordered \<00|00>, \<00|01>, \<00|10>, \<00|11>, \<01|00>, \<01|01>, \<01|10>, \<01|11>, \<10|00>, \<10|01>, \<10|10>, \<10|11>, \<11|00>, \<11|01>, \<11|10>, \<11|11>. This ordering can be generated as follows:
+-- Amplitudes in row-major order where amplitudes are ordered so that the 0 state appears before the 1 state and the lower qubit indices cycle faster than then higher qubit indices. For example, a three-qubit operator has its amplitudes ordered \<00|00>, \<00|01>, \<00|10>, \<00|11>, \<01|00>, \<01|01>, \<01|10>, \<01|11>, \<10|00>, \<10|01>, \<10|10>, \<10|11>, \<11|00>, \<11|01>, \<11|10>, \<11|11>, where states in the bras and kets are correspond to the order of the first argument to `qubitsOperator`. This ordering can be generated as follows:
 --
 -- >>> fmap (splitAt 2) . sequence $ replicate (2 * 2) [minBound..maxBound] :: [([QState], [QState])] 
 -- [([0,0],[0,0]),([0,0],[0,1]),([0,0],[1,0]),([0,0],[1,1]),([0,1],[0,0]),([0,1],[0,1]),([0,1],[1,0]),([0,1],[1,1]),([1,0],[0,0]),([1,0],[0,1]),([1,0],[1,0]),([1,0],[1,1]),([1,1],[0,0]),([1,1],[0,1]),([1,1],[1,0]),([1,1],[1,1])]
 --
 -- The operator must be unitary.
-qubitsOperator :: [QIndex]    -- ^ The qubit indices for which the operator applies.
+qubitsOperator :: [QIndex]    -- ^ The qubit indices for which the operator applies, in descending order according to \<<https://arxiv.org/pdf/1711.02086/>\>.
                -> [Amplitude] -- ^ The amplitudes of the operator matrix, in row-major order with the states ordered from higher indices to lower ones.
                -> Operator    -- ^ The wavefunction operator.
 qubitsOperator indices =
@@ -328,11 +328,11 @@ qubitsOperator indices =
     n = length indices
   in
     Operator
-      . renameExplicit (operatorLabels indices)
+      . renameExplicit (operatorLabels $ reverse indices)
       . listTensor (replicate n 2 ++ replicate n (-2))
 
 
--- | Multiply to wavefunction tensors.
+-- | Multiply two wavefunction or operator tensors.
 mult :: Tensor Amplitude -> Tensor Amplitude -> Tensor Amplitude
 mult x y =
   let

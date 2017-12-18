@@ -149,7 +149,7 @@ b11 = rawWavefunction $ pureState [QState1, QState1]
 
 prop_gate_cphase00 theta =
   let
-    g = applyGate $ G.cphase00 theta 0 1
+    g = applyGate $ G.cphase00 theta 1 0
   in
        g b00 ~~ cis' theta .* b00
     && g b01 ~~ b01
@@ -158,7 +158,7 @@ prop_gate_cphase00 theta =
 
 prop_gate_cphase01 theta =
   let
-    g = applyGate $ G.cphase01 theta 0 1
+    g = applyGate $ G.cphase01 theta 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ cis' theta .* b01
@@ -167,7 +167,7 @@ prop_gate_cphase01 theta =
 
 prop_gate_cphase10 theta =
   let
-    g = applyGate $ G.cphase10 theta 0 1
+    g = applyGate $ G.cphase10 theta 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ b01
@@ -176,7 +176,7 @@ prop_gate_cphase10 theta =
 
 prop_gate_cphase theta =
   let
-    g = applyGate $ G.cphase theta 0 1
+    g = applyGate $ G.cphase theta 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ b01
@@ -185,7 +185,7 @@ prop_gate_cphase theta =
 
 prop_gate_cnot =
   let
-    g = applyGate $ G.cnot 0 1
+    g = applyGate $ G.cnot 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ b01
@@ -194,7 +194,7 @@ prop_gate_cnot =
 
 prop_gate_pswap theta =
   let
-    g = applyGate $ G.pswap theta 0 1
+    g = applyGate $ G.pswap theta 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ cis' theta .* b10
@@ -203,7 +203,7 @@ prop_gate_pswap theta =
 
 prop_gate_swap =
   let
-    g = applyGate $ G.swap 0 1
+    g = applyGate $ G.swap 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ b10
@@ -212,7 +212,7 @@ prop_gate_swap =
 
 prop_gate_iswap =
   let
-    g = applyGate $ G.iswap 0 1
+    g = applyGate $ G.iswap 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ i .* b10
@@ -221,7 +221,7 @@ prop_gate_iswap =
 
 prop_gate_cz =
   let
-    g = applyGate $ G.cz 0 1
+    g = applyGate $ G.cz 1 0
   in
        g b00 ~~ b00
     && g b01 ~~ b01
@@ -242,7 +242,7 @@ b111 = rawWavefunction $ pureState [QState1, QState1, QState1]
 
 prop_gate_ccnot =
   let
-    g = applyGate $ G.ccnot 0 1 2
+    g = applyGate $ G.ccnot 2 1 0
   in
        g b000 ~~ b000
     && g b001 ~~ b001
@@ -255,7 +255,7 @@ prop_gate_ccnot =
 
 prop_gate_cswap =
   let
-    g = applyGate $ G.cswap 0 1 2
+    g = applyGate $ G.cswap 2 1 0
   in
        g b000 ~~ b000
     && g b001 ~~ b001
