@@ -1,5 +1,5 @@
 name               : quil
-version            : 0.1.5.0
+version            : 0.1.6.0
 synopsis           : A Haskell implementation of the Quil instruction set for quantum computing.
 description        : This Haskell library implements the Quil language for quantum computing, as specified in "A Practical Quantum Instruction Set Architecture" \<https://arxiv.org/abs/1608.03355/\>.
 
@@ -32,6 +32,7 @@ library
   hs-source-dirs   : src
   build-depends    : base >= 4.9 && < 4.10
                    , hTensor
+                   , MonadRandom
                    , vector
   exposed          : True
   buildable        : True
@@ -43,6 +44,7 @@ test-suite quil-test
   hs-source-dirs   : src
   build-depends    : base
                    , hTensor
+                   , MonadRandom
                    , QuickCheck
                    , template-haskell
                    , vector

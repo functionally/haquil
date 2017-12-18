@@ -16,7 +16,6 @@
 
 {-# LANGUAGE TemplateHaskell #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-top-binds   #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 
@@ -26,7 +25,7 @@ module Main (
 
 
 import Data.Complex (Complex(..), cis, magnitude)
-import Data.Qubit ((^*), qubits, rawWavefunction)
+import Data.Qubit (QState(..), (^*), pureState, qubits, rawWavefunction)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (coords, scalar)
 import Test.QuickCheck.All (quickCheckAll)
@@ -57,8 +56,8 @@ infix 4 ~~
 
 -- Tests for one-qubit gates.
 
-b0 = rawWavefunction $ qubits [1,0]
-b1 = rawWavefunction $ qubits [0,1]
+b0 = rawWavefunction $ pureState [QState0]
+b1 = rawWavefunction $ pureState [QState1]
 
 prop_gate_i =
   let
@@ -143,18 +142,18 @@ prop_gate_rz theta =
 
 -- Tests for two-cubit gates.
 
-b00 = rawWavefunction $ qubits [1,0 , 0,0]
-b10 = rawWavefunction $ qubits [0,1 , 0,0]
-b01 = rawWavefunction $ qubits [0,0 , 1,0]
-b11 = rawWavefunction $ qubits [0,0 , 0,1]
+b00 = rawWavefunction $ pureState [QState0, QState0]
+b01 = rawWavefunction $ pureState [QState0, QState1]
+b10 = rawWavefunction $ pureState [QState1, QState0]
+b11 = rawWavefunction $ pureState [QState1, QState1]
 
 prop_gate_cphase00 theta =
   let
     g = applyGate $ G.cphase00 theta 0 1
   in
        g b00 ~~ cis' theta .* b00
-    && g b10 ~~ b10
     && g b01 ~~ b01
+    && g b10 ~~ b10
     && g b11 ~~ b11
 
 prop_gate_cphase01 theta =
@@ -162,8 +161,8 @@ prop_gate_cphase01 theta =
     g = applyGate $ G.cphase01 theta 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ cis' theta .* b10
-    && g b01 ~~ b01
+    && g b01 ~~ cis' theta .* b01
+    && g b10 ~~ b10
     && g b11 ~~ b11
 
 prop_gate_cphase10 theta =
@@ -171,8 +170,8 @@ prop_gate_cphase10 theta =
     g = applyGate $ G.cphase10 theta 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ b10
-    && g b01 ~~ cis' theta .* b01
+    && g b01 ~~ b01
+    && g b10 ~~ cis' theta .* b10
     && g b11 ~~ b11
 
 prop_gate_cphase theta =
@@ -180,8 +179,8 @@ prop_gate_cphase theta =
     g = applyGate $ G.cphase theta 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ b10
     && g b01 ~~ b01
+    && g b10 ~~ b10
     && g b11 ~~ cis' theta .* b11
 
 prop_gate_cnot =
@@ -189,17 +188,17 @@ prop_gate_cnot =
     g = applyGate $ G.cnot 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ b10
-    && g b01 ~~ b11
-    && g b11 ~~ b01
+    && g b01 ~~ b01
+    && g b10 ~~ b11
+    && g b11 ~~ b10
 
 prop_gate_pswap theta =
   let
     g = applyGate $ G.pswap theta 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ cis' theta .* b01
     && g b01 ~~ cis' theta .* b10
+    && g b10 ~~ cis' theta .* b01
     && g b11 ~~ b11
 
 prop_gate_swap =
@@ -207,8 +206,8 @@ prop_gate_swap =
     g = applyGate $ G.swap 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ b01
     && g b01 ~~ b10
+    && g b10 ~~ b01
     && g b11 ~~ b11
 
 prop_gate_iswap =
@@ -216,8 +215,8 @@ prop_gate_iswap =
     g = applyGate $ G.iswap 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ i .* b01
     && g b01 ~~ i .* b10
+    && g b10 ~~ i .* b01
     && g b11 ~~ b11
 
 prop_gate_cz =
@@ -225,46 +224,46 @@ prop_gate_cz =
     g = applyGate $ G.cz 0 1
   in
        g b00 ~~ b00
-    && g b10 ~~ b10
     && g b01 ~~ b01
+    && g b10 ~~ b10
     && g b11 ~~ - b11
 
 
 -- Tests for three-cubit gates.
 
-b000 = rawWavefunction $ qubits [1,0 , 0,0 , 0,0 , 0,0]
-b100 = rawWavefunction $ qubits [0,1 , 0,0 , 0,0 , 0,0]
-b010 = rawWavefunction $ qubits [0,0 , 1,0 , 0,0 , 0,0]
-b110 = rawWavefunction $ qubits [0,0 , 0,1 , 0,0 , 0,0]
-b001 = rawWavefunction $ qubits [0,0 , 0,0 , 1,0 , 0,0]
-b101 = rawWavefunction $ qubits [0,0 , 0,0 , 0,1 , 0,0]
-b011 = rawWavefunction $ qubits [0,0 , 0,0 , 0,0 , 1,0]
-b111 = rawWavefunction $ qubits [0,0 , 0,0 , 0,0 , 0,1]
+b000 = rawWavefunction $ pureState [QState0, QState0, QState0]
+b001 = rawWavefunction $ pureState [QState0, QState0, QState1]
+b010 = rawWavefunction $ pureState [QState0, QState1, QState0]
+b011 = rawWavefunction $ pureState [QState0, QState1, QState1]
+b100 = rawWavefunction $ pureState [QState1, QState0, QState0]
+b101 = rawWavefunction $ pureState [QState1, QState0, QState1]
+b110 = rawWavefunction $ pureState [QState1, QState1, QState0]
+b111 = rawWavefunction $ pureState [QState1, QState1, QState1]
 
 prop_gate_ccnot =
   let
     g = applyGate $ G.ccnot 0 1 2
   in
        g b000 ~~ b000
-    && g b100 ~~ b100
-    && g b010 ~~ b010
-    && g b110 ~~ b110
     && g b001 ~~ b001
+    && g b010 ~~ b010
+    && g b011 ~~ b011
+    && g b100 ~~ b100
     && g b101 ~~ b101
-    && g b011 ~~ b111
-    && g b111 ~~ b011
+    && g b110 ~~ b111
+    && g b111 ~~ b110
 
 prop_gate_cswap =
   let
     g = applyGate $ G.cswap 0 1 2
   in
        g b000 ~~ b000
-    && g b100 ~~ b100
-    && g b010 ~~ b010
-    && g b110 ~~ b110
     && g b001 ~~ b001
-    && g b101 ~~ b011
-    && g b011 ~~ b101
+    && g b010 ~~ b010
+    && g b011 ~~ b011
+    && g b100 ~~ b100
+    && g b101 ~~ b110
+    && g b110 ~~ b101
     && g b111 ~~ b111
 
 

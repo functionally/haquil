@@ -137,7 +137,7 @@ t i0 =
     ]
 
 
--- | A controlled phase gate. This corresponds to CPHASE00 in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
+-- | A controlled phase gate on |00>. This corresponds to CPHASE00 in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
 cphase00 :: Double   -- ^ The phase angle [radians].
          -> QIndex   -- ^ The index of the first qubit in the wavefunction.
          -> QIndex   -- ^ The index of the second qubit in the wavefunction.
@@ -152,7 +152,7 @@ cphase00 theta i0 i1 =
     ]
 
 
--- | A controlled phase gate. This corresponds to CPHASE01 in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
+-- | A controlled phase gate on |01>. This corresponds to CPHASE01 in Quil \<<https://arxiv.org/abs/1608.03355/\>>, /but to __CPHASE10__ in pyQuil./.
 cphase01 :: Double   -- ^ The phase angle [radians].
          -> QIndex   -- ^ The index of the first qubit in the wavefunction.
          -> QIndex   -- ^ The index of the second qubit in the wavefunction.
@@ -167,7 +167,7 @@ cphase01 theta i0 i1 =
     ]
 
 
--- | A conrolled pahse gate. This corresponds to CPHASE10 in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
+-- | A conrolled pahse gate on |10>. This corresponds to CPHASE10 in Quil \<<https://arxiv.org/abs/1608.03355/\>>, /but to __CPHASE01__ in pyQuil./.
 cphase10 :: Double   -- ^ The phase angle [radians].
          -> QIndex   -- ^ The index of the first qubit in the wavefunction.
          -> QIndex   -- ^ The index of the second qubit in the wavefunction.
@@ -182,7 +182,7 @@ cphase10 theta i0 i1 =
     ]
 
 
--- | A controlled phase gate. This corresponds to CPHASE in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
+-- | A controlled phase gate on |11>. This corresponds to CPHASE in Quil \<<https://arxiv.org/abs/1608.03355/\>>.
 cphase :: Double   -- ^ The phase angle [radians].
        -> QIndex   -- ^ The index of the first qubit in the wavefunction.
        -> QIndex   -- ^ The index of the second qubit in the wavefunction.

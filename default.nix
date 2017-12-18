@@ -1,13 +1,13 @@
-{ mkDerivation, base, hTensor, QuickCheck, stdenv, template-haskell
-, vector
+{ mkDerivation, base, hTensor, MonadRandom, QuickCheck, stdenv
+, template-haskell, vector
 }:
 mkDerivation {
   pname = "quil";
-  version = "0.1.5.0";
+  version = "0.1.6.0";
   src = ./.;
-  libraryHaskellDepends = [ base hTensor vector ];
+  libraryHaskellDepends = [ base hTensor MonadRandom vector ];
   testHaskellDepends = [
-    base hTensor QuickCheck template-haskell vector
+    base hTensor MonadRandom QuickCheck template-haskell vector
   ];
   homepage = "https://bitbucket.org/functionally/quil";
   description = "A Haskell implementation of the Quil instruction set for quantum computing";
