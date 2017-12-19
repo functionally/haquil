@@ -3,7 +3,7 @@
 }:
 mkDerivation {
   pname = "haquil";
-  version = "0.1.7.2";
+  version = "0.1.7.5";
   src = ./.;
   libraryHaskellDepends = [ base hTensor MonadRandom vector ];
   testHaskellDepends = [
