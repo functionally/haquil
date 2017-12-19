@@ -24,8 +24,10 @@ module Main (
 ) where
 
 
+import Control.Monad (replicateM)
 import Data.Complex (Complex(..), cis, magnitude)
-import Data.Qubit (QState(..), (^*), pureState, qubits, rawWavefunction)
+import Data.Int.Util (ilog2)
+import Data.Qubit (QState(..), (^*), groundState, pureQubit, pureState, qubit, qubits, rawWavefunction, wavefunctionAmplitudes, wavefunctionIndices, wavefunctionOrder)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (coords, scalar)
 import Test.QuickCheck.All (quickCheckAll)
@@ -47,12 +49,69 @@ applyGate = (rawWavefunction .) . (. (qubits . V.toList . coords)) . (^*)
 
 epsilon = 1e-5
 
-xs ~~ ys =
-  and
-    $ zipWith (\x y -> magnitude (x - y) <= epsilon)
-    (V.toList $ coords xs) (V.toList $ coords ys)
+xs ~~ ys = V.toList (coords xs) ~~~ V.toList (coords ys)
 infix 4 ~~
 
+(~~~) = (and .) . zipWith (\x y -> magnitude (x - y) <= epsilon)
+
+
+-- Wavefunction tests.
+
+prop_qubit n a0 a1 =
+  let
+    q = qubit n (a0, a1)
+  in
+       wavefunctionOrder q == 1
+    && wavefunctionIndices q == [n]
+    && wavefunctionAmplitudes q == [([QState0], a0), ([QState1], a1)]
+
+prop_pure_qubit n b =
+  let
+    z = if b then QState1 else QState0
+    q = pureQubit n z
+  in
+       wavefunctionOrder q == 1
+    && wavefunctionIndices q == [n]
+    && fmap fst (wavefunctionAmplitudes q) == [[QState0], [QState1]]
+    && fmap snd (wavefunctionAmplitudes q) ~~~ (if b then [0, 1] else [1, 0])
+
+prop_qubits as =
+  let
+    n = ilog2 $ length as
+    as' = take (2^n) as
+    q = qubits as'
+  in
+       length as < 2
+    || n > 15
+    || wavefunctionOrder q == n
+    && wavefunctionIndices q == reverse [0..(n-1)]
+    && fmap fst (wavefunctionAmplitudes q) == replicateM n [minBound..maxBound]
+    && fmap snd (wavefunctionAmplitudes q) ~~~ as'
+
+prop_ground n =
+  let
+    q = groundState n
+  in
+       n < 2
+    || n > 15
+    || wavefunctionOrder q == n
+    && wavefunctionIndices q == [0..(n-1)]
+    && fmap fst (wavefunctionAmplitudes q) == replicateM n [minBound..maxBound]
+    && fmap snd (wavefunctionAmplitudes q) ~~~ (1 : replicate (2^n - 1) 0)
+
+prop_pure_state bs =
+  let
+    n = length bs
+    z = [if b then QState1 else QState0 | b <- bs]
+    q = pureState z
+  in
+       n < 2
+    || n > 15
+    || wavefunctionOrder q == n
+    && wavefunctionIndices q == [0..(n-1)]
+    && fmap fst (wavefunctionAmplitudes q) == replicateM n [minBound..maxBound]
+    && fmap snd (wavefunctionAmplitudes q) ~~~ [if z' == reverse z then 1 else 0 | z' <- replicateM n [minBound..maxBound]]
+   
 
 -- Tests for one-qubit gates.
 

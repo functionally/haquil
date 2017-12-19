@@ -25,6 +25,7 @@ module Data.Qubit (
 , Operator
 -- * Construction
 , qubit
+, pureQubit
 , qubits
 , groundState
 , pureState
@@ -61,7 +62,7 @@ import Data.Int.Util (ilog2, isqrt)
 import Data.List (elemIndex, groupBy, intersect, intercalate, sortBy)
 import Data.Maybe (catMaybes)
 import Numeric.LinearAlgebra.Array ((.*))
-import Numeric.LinearAlgebra.Array.Util (asScalar, coords, names, order, outers, renameExplicit, reorder)
+import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, reorder)
 import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), listTensor, switch)
 
 import qualified Data.Vector.Storable as V (toList)
@@ -82,6 +83,11 @@ instance Show QState where
 
 -- | Index for qubits in a wavefunction.
 type QIndex = Int
+
+
+-- | Dimension names in order of storage.
+names :: Tensor a -> [String]
+names = fmap iName . dims
 
 
 -- | Prefixes for 'Tensor' indices.
