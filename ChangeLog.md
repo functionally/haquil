@@ -1,5 +1,9 @@
 # Revision history for quil
 
+## 0.1.7.3  -- 2017-12-18
+
+* added measurement
+
 ## 0.1.5.0  -- 2017-12-17
 
 * tested two- and three-qubit gates

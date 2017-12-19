@@ -44,18 +44,22 @@ module Data.Qubit (
 , (*^)
 , (^^*)
 , (*^^)
+, probabilities
 , project
 , measure
 , wavefunctionProbability
 ) where
 
 
-import Control.Arrow (first)
+import Control.Arrow (first, second)
 import Control.Monad (replicateM)
+import Control.Monad.Random.Class (fromList)
 import Control.Monad.Random.Lazy (Rand, RandomGen)
-import Data.Complex (Complex(..))
+import Data.Complex (Complex(..), magnitude)
+import Data.Function (on)
 import Data.Int.Util (ilog2, isqrt)
-import Data.List (intersect, intercalate, sortBy)
+import Data.List (elemIndex, groupBy, intersect, intercalate, sortBy)
+import Data.Maybe (catMaybes)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (asScalar, coords, names, order, outers, renameExplicit, reorder)
 import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), listTensor, switch)
@@ -153,8 +157,7 @@ showTensor toTensor format x =
 tensorIndices :: Tensor Amplitude -- ^ The tensor.
               -> [QIndex]         -- ^ The qubit indices.
 tensorIndices =
-  reverse
-    . fmap (read . tail)
+  fmap (read . tail)
     . filter ((== indexPrefix Contra) . head)
     . names
 
@@ -375,6 +378,29 @@ infixr 6 ^^*
 infixl 6 *^^
 
 
+-- | Probabilities of a selection of qubits.
+probabilities :: [QIndex]                       -- ^ Which qubits.
+              -> Wavefunction                   -- ^ The wavefunciton.
+              -> [([(QIndex, QState)], Double)] -- ^ The probabilities for the combinations of qubit states.
+probabilities indices x =
+  let
+    indices' = wavefunctionIndices x
+    positions = catMaybes $ (`elemIndex` indices') <$> indices
+  in
+    filter ((/= 0) . snd)
+    . fmap (\kvs -> (fst $ head kvs, sum $ snd <$> kvs))
+    . groupBy ((==) `on` fst)
+    $ sortBy (compare `on` fst)
+      [
+        (
+          fmap snd . filter ((`elem` positions) . fst) . zip [0..] $ zip indices' states
+        , magnitude amplitude ^ (2::Int)
+        )
+      |
+        (states, amplitude) <- wavefunctionAmplitudes x
+      ]
+
+
 -- | Project a wavefunction onto a particular state.
 project :: [(QIndex, QState)] -- ^ The qubits for the state.
         -> Wavefunction       -- ^ The wavefunction.
@@ -398,12 +424,17 @@ project states x =
     Wavefunction $ z / sqrt (z * switch z)
 
 
--- | Measure qubits in a wavefunction
+-- | Measure qubits in a wavefunction.
 measure :: RandomGen g
         => [QIndex]                                  -- ^ Which qubits to measure.
         -> Wavefunction                              -- ^ The wavefunction.
         -> Rand g ([(QIndex, QState)], Wavefunction) -- ^ Action for the resulting measurement and wavefunction.
-measure = undefined
+measure indices x =
+  do
+    let
+      candidates = probabilities indices x
+    collapse <- fromList $ second toRational <$> candidates
+    return (collapse, project collapse x)
 
 
 -- | The total probability for the wave function, which should be 1.
