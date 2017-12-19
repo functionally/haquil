@@ -1,5 +1,5 @@
 name               : haquil
-version            : 0.1.7.4
+version            : 0.1.7.5
 synopsis           : A Haskell implementation of the Quil instruction set for quantum computing.
 description        : This Haskell library implements the Quil language for quantum computing, as specified in "A Practical Quantum Instruction Set Architecture" \<https://arxiv.org/abs/1608.03355/\>.
 
@@ -12,7 +12,7 @@ maintainer         : Brian W Bush <code@functionally.io>
 
 homepage           : https://bitbucket.org/functionally/haquil
 bug-reports        : https://bwbush.atlassian.net/projects/HQUIL/issues/
-package-url        : https://bitbucket.org/functionally/quil/downloads/haquil-0.1.7.2.tar.gz
+package-url        : https://bitbucket.org/functionally/quil/downloads/haquil-0.1.7.5.tar.gz
 
 category           : Language
 stability          : Unstable

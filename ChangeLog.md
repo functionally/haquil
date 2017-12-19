@@ -1,5 +1,9 @@
 # Revision history for quil
 
+## 0.1.7.5  -- 2017-12-19
+
+* added example usage
+
 ## 0.1.7.3  -- 2017-12-18
 
 * added measurement
