@@ -12,7 +12,7 @@ Example
 This example creates a wavefunction for the [Bell state](https://en.wikipedia.org/wiki/Bell_state) and then performs a measurement on its highest qubit.
 
 	> import Control.Monad.Random (evalRandIO)
-	> import Data.Qubit ((^^*), groundState)
+	> import Data.Qubit ((^^*), groundState, measure)
 	> import Data.Qubit.Gate (H, CNOT)
 	
 	> -- Construct the Bell state.
