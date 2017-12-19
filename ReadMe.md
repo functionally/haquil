@@ -16,7 +16,7 @@ This example creates a wavefunction for the [Bell state](https://en.wikipedia.or
 	> import Data.Qubit.Gate (H, CNOT)
 	
 	> -- Construct the Bell state.
-        > let bell = [h 0, cnot 0 1] ^^* groundState 2
+	> let bell = [h 0, cnot 0 1] ^^* groundState 2
 	> bell
 	0.7071067811865475|00> + 0.7071067811865475|11> @ [1,0]
 	
