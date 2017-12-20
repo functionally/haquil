@@ -1,5 +1,9 @@
 # Revision history for quil
 
+## 0.2.0.0  -- 2017-12-19
+
+* added types for Quil
+
 ## 0.1.7.5  -- 2017-12-19
 
 * added example usage
