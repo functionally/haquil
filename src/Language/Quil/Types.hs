@@ -33,11 +33,14 @@ module Language.Quil.Types (
 -- * Expressions
 , Expression(..)
 , Number
+, Parameters
+, Arguments
 ) where
 
 
 import Data.Complex (Complex)
 import Data.Qubit (Operator, Wavefunction)
+import Data.Vector (Vector)
 
 
 -- | A quantum abstract machine.
@@ -184,3 +187,11 @@ data Expression =
 
 -- | Complex number.
 type Number = Complex Double
+
+
+-- | Formal parameters.
+type Parameters = Vector Variable
+
+
+-- | Argument list.
+type Arguments = Vector Number

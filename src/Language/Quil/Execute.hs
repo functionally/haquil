@@ -14,33 +14,37 @@
 
 
 module Language.Quil.Execute (
-  CDictionary
-, evaluateExpression
+  evaluateExpression
 ) where
 
 
 import Data.Complex (Complex((:+)))
 import Data.Function (on)
-import Data.Maybe (fromMaybe)
-import Language.Quil.Types (Expression(..), Number, Variable)
+import Language.Quil.Types (Arguments, Expression(..), Number, Parameters)
 
-
--- | Lookup table for values of variables.
-type CDictionary = [(Variable, Number)]
+import qualified Data.Vector as V ((!), elemIndex)
 
 
 -- | Evaluate an expression.
-evaluateExpression :: CDictionary -> Expression -> Number
-evaluateExpression cd (Power  x y) = ((**)  `on` evaluateExpression cd) x y
-evaluateExpression cd (Times  x y) = ((*)   `on` evaluateExpression cd) x y
-evaluateExpression cd (Divide x y) = ((/)   `on` evaluateExpression cd) x y
-evaluateExpression cd (Plus   x y) = ((+)   `on` evaluateExpression cd) x y
-evaluateExpression cd (Minus  x y) = ((-)   `on` evaluateExpression cd) x y
-evaluateExpression cd (Negate   x) =  negate $   evaluateExpression cd  x
-evaluateExpression cd (Sin      x) =  sin    $   evaluateExpression cd  x
-evaluateExpression cd (Cos      x) =  cos    $   evaluateExpression cd  x
-evaluateExpression cd (Sqrt     x) =  sqrt   $   evaluateExpression cd  x
-evaluateExpression cd (Exp      x) =  exp    $   evaluateExpression cd  x
-evaluateExpression cd (Cis      x) =  cis    $   evaluateExpression cd  x where cis z = cos z + (0 :+ 1) * sin z
-evaluateExpression _  (Number   x) = x
-evaluateExpression cd (Variable x) = fromMaybe (error $ "Undefined variable \"" ++ x ++ "\".") $ lookup x cd
+evaluateExpression :: Parameters -- ^ The formal parameters.
+                   -> Expression -- ^ The expression.
+                   -> Arguments  -- ^ The argument.
+                   -> Number     -- ^ The result.
+evaluateExpression parameters (Power  x y) = \z -> ((**) `on` flip (evaluateExpression parameters) z) x y
+evaluateExpression parameters (Times  x y) = \z -> ((*)  `on` flip (evaluateExpression parameters) z) x y
+evaluateExpression parameters (Divide x y) = \z -> ((/)  `on` flip (evaluateExpression parameters) z) x y
+evaluateExpression parameters (Plus   x y) = \z -> ((+)  `on` flip (evaluateExpression parameters) z) x y
+evaluateExpression parameters (Minus  x y) = \z -> ((-)  `on` flip (evaluateExpression parameters) z) x y
+evaluateExpression parameters (Negate   x) = negate . evaluateExpression parameters x
+evaluateExpression parameters (Sin      x) = sin    . evaluateExpression parameters x
+evaluateExpression parameters (Cos      x) = cos    . evaluateExpression parameters x
+evaluateExpression parameters (Sqrt     x) = sqrt   . evaluateExpression parameters x
+evaluateExpression parameters (Exp      x) = exp    . evaluateExpression parameters x
+evaluateExpression parameters (Cis      x) = cis    . evaluateExpression parameters x
+                                               where cis z = cos z + (0 :+ 1) * sin z
+evaluateExpression _          (Number   x) = const x
+evaluateExpression parameters (Variable x) = \z ->
+                                               maybe
+                                                 (error $ "Undefined variable \"" ++ x ++ "\".")
+                                                 (z V.!)
+                                                 $ x `V.elemIndex` parameters
