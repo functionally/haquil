@@ -14,37 +14,50 @@
 
 
 module Language.Quil.Execute (
-  evaluateExpression
+  compileGate
+, compileExpression
 ) where
 
 
 import Data.Complex (Complex((:+)))
 import Data.Function (on)
-import Language.Quil.Types (Arguments, Expression(..), Number, Parameters)
+import Data.Qubit (Operator, qubitsOperator)
+import Language.Quil.Types (Arguments, Expression(..), Number, Parameters, QBit)
 
 import qualified Data.Vector as V ((!), elemIndex)
 
 
--- | Evaluate an expression.
-evaluateExpression :: Parameters -- ^ The formal parameters.
-                   -> Expression -- ^ The expression.
-                   -> Arguments  -- ^ The argument.
-                   -> Number     -- ^ The result.
-evaluateExpression parameters (Power  x y) = \z -> ((**) `on` flip (evaluateExpression parameters) z) x y
-evaluateExpression parameters (Times  x y) = \z -> ((*)  `on` flip (evaluateExpression parameters) z) x y
-evaluateExpression parameters (Divide x y) = \z -> ((/)  `on` flip (evaluateExpression parameters) z) x y
-evaluateExpression parameters (Plus   x y) = \z -> ((+)  `on` flip (evaluateExpression parameters) z) x y
-evaluateExpression parameters (Minus  x y) = \z -> ((-)  `on` flip (evaluateExpression parameters) z) x y
-evaluateExpression parameters (Negate   x) = negate . evaluateExpression parameters x
-evaluateExpression parameters (Sin      x) = sin    . evaluateExpression parameters x
-evaluateExpression parameters (Cos      x) = cos    . evaluateExpression parameters x
-evaluateExpression parameters (Sqrt     x) = sqrt   . evaluateExpression parameters x
-evaluateExpression parameters (Exp      x) = exp    . evaluateExpression parameters x
-evaluateExpression parameters (Cis      x) = cis    . evaluateExpression parameters x
-                                               where cis z = cos z + (0 :+ 1) * sin z
-evaluateExpression _          (Number   x) = const x
-evaluateExpression parameters (Variable x) = \z ->
-                                               maybe
-                                                 (error $ "Undefined variable \"" ++ x ++ "\".")
-                                                 (z V.!)
-                                                 $ x `V.elemIndex` parameters
+-- | Compile a gate.
+compileGate :: Parameters   -- ^ The formal parameters.
+            -> [Expression] -- ^ The expressions for the matrix elements.
+            -> [QBit]       -- ^ Which qubits to operate on.
+            -> Arguments    -- ^ The argument.
+            -> Operator     -- ^ The resulting operator.
+compileGate parameters expressions indices arguments =
+  qubitsOperator indices
+    $ flip (compileExpression parameters) arguments <$> expressions
+
+
+-- | Compile an expression.
+compileExpression :: Parameters -- ^ The formal parameters.
+                  -> Expression -- ^ The expression.
+                  -> Arguments  -- ^ The argument.
+                  -> Number     -- ^ The result.
+compileExpression parameters (Power  x y) = \z -> ((**) `on` flip (compileExpression parameters) z) x y
+compileExpression parameters (Times  x y) = \z -> ((*)  `on` flip (compileExpression parameters) z) x y
+compileExpression parameters (Divide x y) = \z -> ((/)  `on` flip (compileExpression parameters) z) x y
+compileExpression parameters (Plus   x y) = \z -> ((+)  `on` flip (compileExpression parameters) z) x y
+compileExpression parameters (Minus  x y) = \z -> ((-)  `on` flip (compileExpression parameters) z) x y
+compileExpression parameters (Negate   x) = negate . compileExpression parameters x
+compileExpression parameters (Sin      x) = sin    . compileExpression parameters x
+compileExpression parameters (Cos      x) = cos    . compileExpression parameters x
+compileExpression parameters (Sqrt     x) = sqrt   . compileExpression parameters x
+compileExpression parameters (Exp      x) = exp    . compileExpression parameters x
+compileExpression parameters (Cis      x) = cis    . compileExpression parameters x
+                                              where cis z = cos z + (0 :+ 1) * sin z
+compileExpression _          (Number   x) = const x
+compileExpression parameters (Variable x) = \z ->
+                                              maybe
+                                                (error $ "Undefined variable \"" ++ x ++ "\".")
+                                                (z V.!)
+                                                $ x `V.elemIndex` parameters

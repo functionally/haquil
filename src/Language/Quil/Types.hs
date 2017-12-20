@@ -65,11 +65,11 @@ data Definitions =
 
 
 -- | A gate.
-type Gate = [Parameter] -> [QBit] -> Operator
+type Gate = [QBit] -> Arguments -> Operator
 
 
 -- | A circuit
-type Circuit = Definitions -> [Parameter] -> [QBit] -> Operator
+type Circuit = Definitions -> [QBit] -> Arguments -> Operator
 
 
 -- | The Quil instruction set.
