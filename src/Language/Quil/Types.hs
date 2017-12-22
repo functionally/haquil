@@ -13,9 +13,13 @@
 -----------------------------------------------------------------------------
 
 
+{-# LANGUAGE RecordWildCards #-}
+
+
 module Language.Quil.Types (
 -- * Machines
   Machine(..)
+, initialize
 , Definitions(..)
 , Gate
 , Circuit
@@ -35,11 +39,22 @@ module Language.Quil.Types (
 , Number
 , Parameters
 , Arguments
+-- * Classical Bits
+, BitData(..)
+, toBitVector
+, boolFromBitVector
+, integerFromBitVector
+, doubleFromBitVector
+, complexFromBitVector
 ) where
 
 
-import Data.Complex (Complex)
-import Data.Qubit (Operator, Wavefunction)
+import Data.Binary.IEEE754 (doubleToWord, wordToDouble)
+import Data.BitVector (BV, bitVec, extract, showHex, testBit)
+import Data.Complex (Complex((:+)), imagPart, realPart)
+import Data.Default (Default(def))
+import Data.Monoid ((<>))
+import Data.Qubit (Operator, Wavefunction, groundState)
 import Data.Vector (Vector)
 
 
@@ -48,11 +63,82 @@ data Machine =
   Machine
   {
     qstate       :: Wavefunction      -- ^ The qubits.
-  , cstate       :: Integer           -- ^ The classical bits
+  , cstate       :: BV                -- ^ The classical bits
   , definitions  :: Definitions       -- ^ Definitions of gates and circuits.
-  , instructions :: [Instruction]     -- ^ The program instructions.
   , counter      :: Int               -- ^ The program counter.
   }
+
+instance Show Machine where
+  show Machine{..} =
+    unlines
+      [
+        "Quantum state:   " ++ show    qstate
+      , "Classical state: " ++ showHex cstate
+      , "Program counter: " ++ show    counter
+      ]
+
+instance Default Machine where
+  def = initialize 1 [BoolBit False]
+
+
+-- | Initialize a machine.
+initialize :: Int       -- ^ The number of qubits.
+           -> [BitData] -- ^ The classical bits.
+           -> Machine   -- ^ The machine.
+initialize n cstate' =
+  let
+    qstate       = groundState n
+    cstate       = mconcat $ toBitVector <$> cstate'
+    definitions  = def
+    counter      = 0
+  in
+    Machine{..}
+
+
+-- | Data types for encoding as bit vectors.
+data BitData =
+    BoolBit Bool
+  | IntegerBits Int Integer
+  | DoubleBits Double
+  | ComplexBits Number
+    deriving (Eq, Read, Show)
+
+
+-- | Encode data as a bit vector.
+toBitVector :: BitData -> BV
+toBitVector (BoolBit       x) = bitVec 1 $ fromEnum x
+toBitVector (IntegerBits n x) = bitVec n x
+toBitVector (DoubleBits    x) = bitVec 64 $ doubleToWord x
+toBitVector (ComplexBits   x) = bitVec 64 (doubleToWord $ realPart x) <> bitVec 64 (doubleToWord $ imagPart x)
+
+
+-- | Extract a boolean from a bit vector.
+boolFromBitVector :: Int  -- ^ Which bit to start from, counting from zero.
+                  -> BV   -- ^ The bit vector.
+                  -> Bool -- ^ The boolean.
+boolFromBitVector = flip testBit
+
+
+-- | Extract an integer from a bit vector.
+integerFromBitVector :: Int -- ^ Which bit to start from, counting from zero.
+                     -> Int -- ^ How many bits to encode.
+                     -> BV  -- ^ The bit vector
+                     -> Integer -- ^ The integer.
+integerFromBitVector k n = toInteger . extract (k + n - 1) k
+
+
+-- | Extract a double from a bit vector.
+doubleFromBitVector :: Int    -- ^ Which bit to start from, counting from zero.
+                    -> BV     -- ^ THe bit vector.
+                    -> Double -- ^ The double.
+doubleFromBitVector k = wordToDouble . toEnum . fromEnum . extract (k + 63) k
+
+
+-- | Extract a complex number from a bit vector.
+complexFromBitVector :: Int -- ^ Which bit to start from, counting from zero.
+                     -> BV  -- ^ THe bit vector.
+                     -> Number -- ^ The complex number.
+complexFromBitVector k x = doubleFromBitVector k x :+ doubleFromBitVector (k + 64) x
 
 
 -- | Definitions of gates and circuits.
@@ -62,6 +148,9 @@ data Definitions =
     gates    :: [(Name, Gate)]
   , circuits :: [(Name, Circuit)]
   }
+
+instance Default Definitions where
+  def = Definitions [] []
 
 
 -- | A gate.
@@ -84,10 +173,10 @@ data Instruction =
   | PHASE Parameter QBit
   | S QBit
   | T QBit
-  | CPHASE00 Parameter QBit
-  | CPHASE01 Parameter QBit
-  | CPHASE10 Parameter QBit
-  | CPHASE Parameter QBit
+  | CPHASE00 Parameter QBit QBit
+  | CPHASE01 Parameter QBit QBit
+  | CPHASE10 Parameter QBit QBit
+  | CPHASE Parameter QBit QBit
   | RX Parameter QBit
   | RY Parameter QBit
   | RZ Parameter QBit
