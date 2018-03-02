@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 --
 -- Module      :  $Header$
--- Copyright   :  (c) 2017 Brian W Bush
+-- Copyright   :  (c) 2017-18 Brian W Bush
 -- License     :  MIT
 --
 -- Maintainer  :  Brian W Bush <code@functionally.io>
