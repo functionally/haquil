@@ -39,20 +39,22 @@ executeInstruction :: Instruction -- ^ The instruction.
                    -> Machine     -- ^ The state of the machine.
                    -> Machine     -- ^ The resulting state of the machine.
 
-executeInstruction (COMMENT _) = onQubits $ groundState . wavefunctionOrder
+executeInstruction (COMMENT _) = id
 
-executeInstruction (I  index) = onQubits (G.i index ^*)
-executeInstruction (X  index) = onQubits (G.x index ^*)
-executeInstruction (Y  index) = onQubits (G.y index ^*)
-executeInstruction (Z  index) = onQubits (G.z index ^*)
-executeInstruction (H  index) = onQubits (G.h index ^*)
-executeInstruction (S  index) = onQubits (G.s index ^*)
-executeInstruction (T  index) = onQubits (G.t index ^*)
-executeInstruction (CZ index) = onQubits (G.t index ^*)
+executeInstruction RESET = onQubits $ groundState . wavefunctionOrder
+
+executeInstruction (I index) = onQubits (G.i index ^*)
+executeInstruction (X index) = onQubits (G.x index ^*)
+executeInstruction (Y index) = onQubits (G.y index ^*)
+executeInstruction (Z index) = onQubits (G.z index ^*)
+executeInstruction (H index) = onQubits (G.h index ^*)
+executeInstruction (S index) = onQubits (G.s index ^*)
+executeInstruction (T index) = onQubits (G.t index ^*)
 
 executeInstruction (CNOT  index index') = onQubits (G.cnot  index index' ^*)
 executeInstruction (SWAP  index index') = onQubits (G.swap  index index' ^*)
 executeInstruction (ISWAP index index') = onQubits (G.iswap index index' ^*)
+executeInstruction (CZ    index index') = onQubits (G.cz    index index' ^*)
 
 executeInstruction (CCNOT index index' index'') = onQubits (G.ccnot index index' index'' ^*)
 executeInstruction (CSWAP index index' index'') = onQubits (G.cswap index index' index'' ^*)
@@ -73,6 +75,11 @@ executeInstruction (USEGATE    _ _ _  ) = error "The DEFGATE instruction has not
 executeInstruction (DEFCIRCUIT _ _ _ _) = error "The DEFCIRCUIT instruction has not been implemented."
 executeInstruction (USECIRCUIT _ _ _  ) = error "The DEFCIRCUIT instruction has not been implemented."
 
+executeInstruction (MEASURE _ _) = undefined
+
+executeInstruction HALT = \machine -> machine {halted = True}
+executeInstruction WAIT = onBits id
+
 executeInstruction (LABEL       _  ) = error "The LABEL instruction has not been implemented."
 executeInstruction (JUMP        _  ) = error "The JUMP instruction has not been implemented."
 executeInstruction (JUMP_WHEN   _ _) = error "The JUMP_WHEN instruction has not been implemented."
@@ -90,7 +97,7 @@ executeInstruction (EXCHANGE address address') = onBits (\bv -> setBit' (bv `tes
 executeInstruction NOP = onBits id
 
 executeInstruction (INCLUDE _) = error "The INCLUDE instruction has not been implemented."
-executeInstruction (PRAGMA  _) = error "The PRAGMA instruction has not been implemented."
+executeInstruction (PRAGMA  _) = onBits id
 
 
 onQubits :: (Wavefunction -> Wavefunction) -> Machine -> Machine

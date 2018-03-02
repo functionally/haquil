@@ -19,7 +19,7 @@
 module Language.Quil.Types (
 -- * Machines
   Machine(..)
-, initialize
+, machine
 , Definitions(..)
 , Gate
 , Circuit
@@ -62,10 +62,11 @@ import Data.Vector (Vector)
 data Machine =
   Machine
   {
-    qstate       :: Wavefunction      -- ^ The qubits.
-  , cstate       :: BV                -- ^ The classical bits
-  , definitions  :: Definitions       -- ^ Definitions of gates and circuits.
-  , counter      :: Int               -- ^ The program counter.
+    qstate       :: Wavefunction -- ^ The qubits.
+  , cstate       :: BV           -- ^ The classical bits
+  , definitions  :: Definitions  -- ^ Definitions of gates and circuits.
+  , counter      :: Int          -- ^ The program counter.
+  , halted       :: Bool         -- ^ Whether the machine has halted.
   }
 
 instance Show Machine where
@@ -75,22 +76,24 @@ instance Show Machine where
         "Quantum state:   " ++ show    qstate
       , "Classical state: " ++ showHex cstate
       , "Program counter: " ++ show    counter
+      , "Halted?          " ++ show    halted
       ]
 
 instance Default Machine where
-  def = initialize 1 [BoolBit False]
+  def = machine 1 [BoolBit False]
 
 
 -- | Initialize a machine.
-initialize :: Int       -- ^ The number of qubits.
-           -> [BitData] -- ^ The classical bits.
-           -> Machine   -- ^ The machine.
-initialize n cstate' =
+machine :: Int       -- ^ The number of qubits.
+        -> [BitData] -- ^ The classical bits.
+        -> Machine   -- ^ The machine.
+machine n cstate' =
   let
     qstate       = groundState n
     cstate       = mconcat $ toBitVector <$> cstate'
     definitions  = def
     counter      = 0
+    halted       = False
   in
     Machine{..}
 
@@ -163,7 +166,7 @@ type Circuit = Definitions -> [QBit] -> Arguments -> Operator
 
 -- | The Quil instruction set.
 data Instruction =
-    COMMENT String
+    COMMENT String -- ^ /Does nothing./
   | RESET
   | I QBit
   | X QBit
@@ -186,18 +189,18 @@ data Instruction =
   | SWAP QBit QBit
   | ISWAP QBit QBit
   | CSWAP QBit QBit QBit
-  | CZ QBit
-  | DEFGATE Name [Variable] [Expression] 
-  | USEGATE Name [Parameter] [QBit]
-  | DEFCIRCUIT Name [Variable] [QVariable] [CircuitInstruction]
-  | USECIRCUIT Name [Parameter] [QBit]
+  | CZ QBit QBit
+  | DEFGATE Name [Variable] [Expression]                        -- ^ /Not yet implemented./
+  | USEGATE Name [Parameter] [QBit]                             -- ^ /Not yet implemented./
+  | DEFCIRCUIT Name [Variable] [QVariable] [CircuitInstruction] -- ^ /Not yet implemented./
+  | USECIRCUIT Name [Parameter] [QBit]                          -- ^ /Not yet implemented./
   | MEASURE [QBit] (Maybe Address)
   | HALT
-  | WAIT
-  | LABEL Label
-  | JUMP Label
-  | JUMP_WHEN Label Address
-  | JUMP_UNLESS Label Address
+  | WAIT                      -- ^ /Does nothing./
+  | LABEL Label               -- ^ /Not yet implemented./
+  | JUMP Label                -- ^ /Not yet implemented./
+  | JUMP_WHEN Label Address   -- ^ /Not yet implemented./
+  | JUMP_UNLESS Label Address -- ^ /Not yet implemented./
   | FALSE Address
   | TRUE Address
   | NOT Address
@@ -206,8 +209,8 @@ data Instruction =
   | MOVE Address Address
   | EXCHANGE Address Address
   | NOP
-  | INCLUDE FilePath
-  | PRAGMA String
+  | INCLUDE FilePath -- ^ /Not yet implemented./
+  | PRAGMA String    -- ^ /Does nothing./
     deriving (Eq, Read, Show)
 
 
