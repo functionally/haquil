@@ -194,7 +194,7 @@ data Instruction =
   | USEGATE Name [Parameter] [QBit]                             -- ^ /Not yet implemented./
   | DEFCIRCUIT Name [Variable] [QVariable] [CircuitInstruction] -- ^ /Not yet implemented./
   | USECIRCUIT Name [Parameter] [QBit]                          -- ^ /Not yet implemented./
-  | MEASURE [QBit] (Maybe Address)
+  | MEASURE QBit (Maybe Address)
   | HALT
   | WAIT                      -- ^ /Does nothing./
   | LABEL Label               -- ^ /Not yet implemented./

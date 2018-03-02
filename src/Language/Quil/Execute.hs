@@ -17,29 +17,74 @@
 
 
 module Language.Quil.Execute (
-  executeInstruction
+-- * Execution
+  runProgram
+, runProgramWithStdGen
+, runProgramWithStdRandom
+, executeInstructions
+, executeInstruction
+-- * Compilation
 , compileGate
 , compileExpression
 ) where
 
 
+import Control.Monad (foldM)
+import Control.Monad.Random.Lazy (Rand, RandomGen, evalRand, evalRandIO)
 import Data.Bits (clearBit, complementBit, setBit, testBit)
 import Data.BitVector (BV)
 import Data.Complex (Complex((:+)))
 import Data.Function (on)
-import Data.Qubit (Operator, Wavefunction, (^*), groundState, qubitsOperator, wavefunctionOrder)
-import Language.Quil.Types (Arguments, Expression(..), Instruction(..), Machine(..), Number, Parameter(..), Parameters, QBit)
+import Data.Qubit (Operator, Wavefunction, (^*), groundState, measure, qubitsOperator, wavefunctionOrder)
+import Language.Quil.Types (Arguments, BitData, Expression(..), Instruction(..), Machine(..), Number, Parameter(..), Parameters, QBit, complexFromBitVector, doubleFromBitVector)
+import System.Random (StdGen)
 
 import qualified Data.Qubit.Gate as G
-import qualified Data.Vector as V ((!), elemIndex)
+import qualified Data.Vector as V ((!), elemIndex, empty)
+import qualified Language.Quil.Types as Q (machine)
+
+
+-- | Create an action to run a program, starting from the ground state.
+runProgramWithStdGen :: StdGen        -- ^ The random number generator.
+                     -> Int           -- ^ The number of qubits.
+                     -> [BitData]     -- ^ The classical bits.
+                     -> [Instruction] -- ^ The instructions
+                     -> Machine       -- ^ The resulting state of the machine.
+runProgramWithStdGen stdGen n cstate' instructions = runProgram n cstate' instructions `evalRand` stdGen
+
+
+-- | Run a program, starting from the ground state and using a particular random-number generator.
+runProgramWithStdRandom :: Int           -- ^ The number of qubits.
+                        -> [BitData]     -- ^ The classical bits.
+                        -> [Instruction] -- ^ The instructions
+                        -> IO Machine    -- ^ Action for the resulting state of the machine.
+runProgramWithStdRandom n cstate' instructions = evalRandIO $ runProgram n cstate' instructions
+
+
+-- | Run a program, starting from the ground state and using the global random number generator.
+runProgram :: RandomGen g
+           => Int            -- ^ The number of qubits.
+           -> [BitData]      -- ^ The classical bits.
+           -> [Instruction]  -- ^ The instructions
+           -> Rand g Machine -- ^ Action for the resulting state of the machine.
+runProgram n cstate' instructions = executeInstructions instructions $ Q.machine n cstate'
+
+
+-- | Execute a series of instructions.
+executeInstructions :: RandomGen g
+                    => [Instruction]  -- ^ The instructions
+                    -> Machine        -- ^ The state of the machine.
+                    -> Rand g Machine -- ^ Action for the resulting state of the machine.
+executeInstructions = flip $ foldM (flip executeInstruction)
 
 
 -- | Execute an instruction.
-executeInstruction :: Instruction -- ^ The instruction.
-                   -> Machine     -- ^ The state of the machine.
-                   -> Machine     -- ^ The resulting state of the machine.
+executeInstruction :: RandomGen g
+                   => Instruction    -- ^ The instruction.
+                   -> Machine        -- ^ The state of the machine.
+                   -> Rand g Machine -- ^ Action for the resulting state of the machine.
 
-executeInstruction (COMMENT _) = id
+executeInstruction (COMMENT _) = return
 
 executeInstruction RESET = onQubits $ groundState . wavefunctionOrder
 
@@ -59,31 +104,40 @@ executeInstruction (CZ    index index') = onQubits (G.cz    index index' ^*)
 executeInstruction (CCNOT index index' index'') = onQubits (G.ccnot index index' index'' ^*)
 executeInstruction (CSWAP index index' index'') = onQubits (G.cswap index index' index'' ^*)
 
-executeInstruction (PHASE theta index) = onQubits' (\theta' -> (G.phase theta' index ^*)) theta
-executeInstruction (RX    theta index) = onQubits' (\theta' -> (G.rx    theta' index ^*)) theta
-executeInstruction (RY    theta index) = onQubits' (\theta' -> (G.ry    theta' index ^*)) theta
-executeInstruction (RZ    theta index) = onQubits' (\theta' -> (G.rz    theta' index ^*)) theta
+executeInstruction (PHASE theta index) = onQubits' (\theta' -> (G.phase (ensureReal theta') index ^*)) theta
+executeInstruction (RX    theta index) = onQubits' (\theta' -> (G.rx    (ensureReal theta') index ^*)) theta
+executeInstruction (RY    theta index) = onQubits' (\theta' -> (G.ry    (ensureReal theta') index ^*)) theta
+executeInstruction (RZ    theta index) = onQubits' (\theta' -> (G.rz    (ensureReal theta') index ^*)) theta
 
-executeInstruction (CPHASE00 theta index index') = onQubits' (\theta' -> (G.cphase00 theta' index index' ^*)) theta
-executeInstruction (CPHASE01 theta index index') = onQubits' (\theta' -> (G.cphase01 theta' index index' ^*)) theta
-executeInstruction (CPHASE10 theta index index') = onQubits' (\theta' -> (G.cphase10 theta' index index' ^*)) theta
-executeInstruction (CPHASE   theta index index') = onQubits' (\theta' -> (G.cphase   theta' index index' ^*)) theta
-executeInstruction (PSWAP    theta index index') = onQubits' (\theta' -> (G.pswap    theta' index index' ^*)) theta
+executeInstruction (CPHASE00 theta index index') = onQubits' (\theta' -> (G.cphase00 (ensureReal theta') index index' ^*)) theta
+executeInstruction (CPHASE01 theta index index') = onQubits' (\theta' -> (G.cphase01 (ensureReal theta') index index' ^*)) theta
+executeInstruction (CPHASE10 theta index index') = onQubits' (\theta' -> (G.cphase10 (ensureReal theta') index index' ^*)) theta
+executeInstruction (CPHASE   theta index index') = onQubits' (\theta' -> (G.cphase   (ensureReal theta') index index' ^*)) theta
+executeInstruction (PSWAP    theta index index') = onQubits' (\theta' -> (G.pswap    (ensureReal theta') index index' ^*)) theta
 
-executeInstruction (DEFGATE    _ _ _  ) = error "The DEFGATE instruction has not been implemented."
-executeInstruction (USEGATE    _ _ _  ) = error "The DEFGATE instruction has not been implemented."
-executeInstruction (DEFCIRCUIT _ _ _ _) = error "The DEFCIRCUIT instruction has not been implemented."
-executeInstruction (USECIRCUIT _ _ _  ) = error "The DEFCIRCUIT instruction has not been implemented."
+executeInstruction DEFGATE    {} = unimplemented "DEFGATE"
+executeInstruction USEGATE    {} = unimplemented "DEFGATE"
+executeInstruction DEFCIRCUIT {} = unimplemented "DEFCIRCUIT"
+executeInstruction USECIRCUIT {} = unimplemented "DEFCIRCUIT"
 
-executeInstruction (MEASURE _ _) = undefined
+executeInstruction (MEASURE index address) =
+  \machine@Machine{..} ->
+    do
+      ([(_, b)], qstate') <- measure [index] qstate
+      noop
+        machine
+          {
+            qstate = qstate'
+          , cstate = maybe id (setBit' (toEnum $ fromEnum b)) address cstate
+          }
 
-executeInstruction HALT = \machine -> machine {halted = True}
-executeInstruction WAIT = onBits id
+executeInstruction HALT = fmap (\machine -> machine {halted = True}) . noop
+executeInstruction WAIT = noop
 
-executeInstruction (LABEL       _  ) = error "The LABEL instruction has not been implemented."
-executeInstruction (JUMP        _  ) = error "The JUMP instruction has not been implemented."
-executeInstruction (JUMP_WHEN   _ _) = error "The JUMP_WHEN instruction has not been implemented."
-executeInstruction (JUMP_UNLESS _ _) = error "The JUMP_UNLESS instruction has not been implemented."
+executeInstruction LABEL       {} = unimplemented "LABEL"
+executeInstruction JUMP        {} = unimplemented "JUMP"
+executeInstruction JUMP_WHEN   {} = unimplemented "JUMP_WHEN"
+executeInstruction JUMP_UNLESS {} = unimplemented "JUMP_UNLESS"
 
 executeInstruction (FALSE address) = onBits (setBit' False address)
 executeInstruction (TRUE  address) = onBits (setBit' True  address)
@@ -94,39 +148,70 @@ executeInstruction (OR       address address') = onBits (\bv -> setBit' (bv `tes
 executeInstruction (MOVE     address address') = onBits (\bv -> setBit' (bv `testBit` address                         ) address' bv)
 executeInstruction (EXCHANGE address address') = onBits (\bv -> setBit' (bv `testBit` address) address' $ setBit' (bv `testBit` address') address bv)
 
-executeInstruction NOP = onBits id
+executeInstruction NOP = noop
 
-executeInstruction (INCLUDE _) = error "The INCLUDE instruction has not been implemented."
-executeInstruction (PRAGMA  _) = onBits id
-
-
-onQubits :: (Wavefunction -> Wavefunction) -> Machine -> Machine
-onQubits transition machine@Machine{..} =
-  machine
-  {
-    qstate  = transition qstate
-  , counter = counter + 1
-  }
+executeInstruction (INCLUDE _) = unimplemented "INCLUDE"
+executeInstruction (PRAGMA  _) = noop
 
 
-onQubits' :: (Double -> Wavefunction -> Wavefunction) -> Parameter -> Machine -> Machine
-onQubits' _transition _parameter _machine@Machine{..} = undefined
+-- | Ensure a complex number is real.
+ensureReal :: Number -- ^ The number.
+           -> Double -- ^ The double, or an error.
+ensureReal (x :+ 0) = x
+ensureReal _        = error "Built-in gate must have real argument."
 
 
-onQubits'' :: (Number -> Wavefunction -> Wavefunction) -> Parameter -> Machine -> Machine
-onQubits'' _transition _parameter _machine@Machine{..} = undefined
+-- | Report that an instruction has not yet been implemented.
+unimplemented :: String -- ^ The name of the instruction.
+              -> a      -- ^ THe error.
+unimplemented instruction = error $ "The " ++ instruction ++ " instruction has not yet been implemented."
 
 
-onBits :: (BV -> BV) -> Machine -> Machine
-onBits transition machine@Machine{..} =
-  machine
-  {
-    cstate  = transition cstate
-  , counter = counter + 1
-  }
+-- | Just increment the progrma counter.
+noop :: RandomGen g
+     => Machine        -- ^ The machine.
+     -> Rand g Machine -- ^ Action for the resulting state of the machine.
+noop machine@Machine{..} =
+  if halted
+    then error "The machine has halted."
+    else return machine { counter = counter + 1 }
 
 
-setBit' :: Bool -> Int -> BV -> BV
+-- | Transform the wafefunction.
+onQubits :: RandomGen g
+         => (Wavefunction -> Wavefunction) -- ^ The transformation of the wavefunction.
+         -> Machine                        -- ^ The machine.
+         -> Rand g Machine                 -- ^ Action for the resulting state of the machine.
+onQubits transition machine@Machine{..} = noop machine { qstate  = transition qstate }
+
+
+-- | Transofrm the wavefunction.
+onQubits' :: RandomGen g
+          => (Number -> Wavefunction -> Wavefunction) -- ^ The parameterized transformation of the wavefunction.
+          -> Parameter                                -- ^ The parameter.
+          -> Machine                                  -- ^ The machine.
+          -> Rand g Machine                           -- ^ Action for the resulting state of the machine.
+onQubits' _ (DynamicParameter _ Nothing) _ = error "A single bit cannot be used as an input parameter for a gate."
+onQubits' transition (DynamicParameter address (Just address')) machine@Machine{..}
+  | address + 63  == address' = onQubits (transition $ doubleFromBitVector  address cstate :+ 0) machine
+  | address + 127 == address' = onQubits (transition $ complexFromBitVector address cstate     ) machine
+  | otherwise                 = error "A number must consist of 64 or 128 consecutive bits."
+onQubits' transition (Expression expression) machine = onQubits (transition $ compileExpression V.empty expression V.empty) machine
+
+
+-- Transform the classical bis.
+onBits :: RandomGen g
+       => (BV -> BV)     -- ^ The transformation of the bits.
+       -> Machine        -- ^ THe machine.
+       -> Rand g Machine -- ^ Action for the resulting state of the machine.
+onBits transition machine@Machine{..} = noop machine { cstate = transition cstate }
+
+
+-- | Set a bit.
+setBit' :: Bool -- ^ The value.
+        -> Int  -- ^ Which bit.
+        -> BV   -- ^ The initial bits.
+        -> BV   -- ^ The result.
 setBit' True  = flip setBit
 setBit' False = flip clearBit
 

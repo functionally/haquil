@@ -1,16 +1,16 @@
 { mkDerivation, base, bv, data-binary-ieee754, data-default
-, hTensor, MonadRandom, QuickCheck, stdenv, template-haskell
+, hTensor, MonadRandom, random, QuickCheck, stdenv, template-haskell
 , vector
 }:
 mkDerivation {
   pname = "haquil";
-  version = "0.2.1.4";
+  version = "0.2.1.5";
   src = ./.;
   libraryHaskellDepends = [
-    base bv data-binary-ieee754 data-default hTensor MonadRandom vector
+    base bv data-binary-ieee754 data-default hTensor MonadRandom random vector
   ];
   testHaskellDepends = [
-    base bv data-binary-ieee754 data-default hTensor MonadRandom
+    base bv data-binary-ieee754 data-default hTensor MonadRandom random
     QuickCheck template-haskell vector
   ];
   homepage = "https://bitbucket.org/functionally/haquil";
