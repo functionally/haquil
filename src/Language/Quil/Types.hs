@@ -43,6 +43,7 @@ module Language.Quil.Types (
 , BitData(..)
 , toBitVector
 , boolFromBitVector
+, finiteBitsFromBitVector
 , integerFromBitVector
 , doubleFromBitVector
 , complexFromBitVector
@@ -51,11 +52,14 @@ module Language.Quil.Types (
 
 import Data.Binary.IEEE754 (doubleToWord, wordToDouble)
 import Data.BitVector (BV, bitVec, extract, showHex, testBit)
+import Data.Bits (FiniteBits(finiteBitSize))
 import Data.Complex (Complex((:+)), imagPart, realPart)
 import Data.Default (Default(def))
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Monoid ((<>))
 import Data.Qubit (Operator, Wavefunction, groundState)
 import Data.Vector (Vector)
+import Data.Word (Word8, Word16, Word32, Word64)
 
 
 -- | A quantum abstract machine.
@@ -101,6 +105,14 @@ machine n cstate' =
 -- | Data types for encoding as bit vectors.
 data BitData =
     BoolBit Bool
+  | IntBits8 Int8
+  | IntBits16 Int16
+  | IntBits32 Int32
+  | IntBits64 Int64
+  | WordBits8 Word8
+  | WordBits16 Word16
+  | WordBits32 Word32
+  | WordBits64 Word64
   | IntegerBits Int Integer
   | DoubleBits Double
   | ComplexBits Number
@@ -109,10 +121,18 @@ data BitData =
 
 -- | Encode data as a bit vector.
 toBitVector :: BitData -> BV
-toBitVector (BoolBit       x) = bitVec 1 $ fromEnum x
-toBitVector (IntegerBits n x) = bitVec n x
+toBitVector (BoolBit       x) = bitVec  1 $ fromEnum x
+toBitVector (IntBits8      x) = bitVec  8 $ toInteger x
+toBitVector (IntBits16     x) = bitVec 16 $ toInteger x
+toBitVector (IntBits32     x) = bitVec 32 $ toInteger x
+toBitVector (IntBits64     x) = bitVec 64 $ toInteger x
+toBitVector (WordBits8     x) = bitVec  8 $ toInteger x
+toBitVector (WordBits16    x) = bitVec 16 $ toInteger x
+toBitVector (WordBits32    x) = bitVec 32 $ toInteger x
+toBitVector (WordBits64    x) = bitVec 64 $ toInteger x
+toBitVector (IntegerBits n x) = bitVec  n   x
 toBitVector (DoubleBits    x) = bitVec 64 $ doubleToWord x
-toBitVector (ComplexBits   x) = bitVec 64 (doubleToWord $ realPart x) <> bitVec 64 (doubleToWord $ imagPart x)
+toBitVector (ComplexBits   x) = bitVec 64   (doubleToWord $ realPart x) <> bitVec 64 (doubleToWord $ imagPart x)
 
 
 -- | Extract a boolean from a bit vector.
@@ -122,11 +142,22 @@ boolFromBitVector :: Int  -- ^ Which bit to start from, counting from zero.
 boolFromBitVector = flip testBit
 
 
+-- | Extract a finite bits from a bit vector.
+finiteBitsFromBitVector :: (Integral a, FiniteBits a)
+                        => Int  -- ^ Which bit to start from, counting from zero.
+                        -> BV   -- ^ The bit vector.
+                        -> a    -- ^ The finite bits.
+finiteBitsFromBitVector k v =
+  let
+    y = fromIntegral . toInteger $ extract (k + finiteBitSize y - 1) k v
+  in
+    y
+
 -- | Extract an integer from a bit vector.
 integerFromBitVector :: Int -- ^ Which bit to start from, counting from zero.
-                     -> Int -- ^ How many bits to encode.
-                     -> BV  -- ^ The bit vector
-                     -> Integer -- ^ The integer.
+                     -> Int     -- ^ How many bits to encode.
+                     -> BV      -- ^ The bit vector
+                     -> Integer -- ^ The integer (unsigned).
 integerFromBitVector k n = toInteger . extract (k + n - 1) k
 
 
@@ -134,14 +165,14 @@ integerFromBitVector k n = toInteger . extract (k + n - 1) k
 doubleFromBitVector :: Int    -- ^ Which bit to start from, counting from zero.
                     -> BV     -- ^ THe bit vector.
                     -> Double -- ^ The double.
-doubleFromBitVector k = wordToDouble . toEnum . fromEnum . extract (k + 63) k
+doubleFromBitVector k = wordToDouble . fromIntegral . extract (k + 63) k
 
 
 -- | Extract a complex number from a bit vector.
 complexFromBitVector :: Int -- ^ Which bit to start from, counting from zero.
                      -> BV  -- ^ THe bit vector.
                      -> Number -- ^ The complex number.
-complexFromBitVector k x = doubleFromBitVector k x :+ doubleFromBitVector (k + 64) x
+complexFromBitVector k x = doubleFromBitVector (k + 64) x :+ doubleFromBitVector k x
 
 
 -- | Definitions of gates and circuits.

@@ -28,6 +28,7 @@ import Control.Monad (replicateM)
 import Data.Complex (Complex(..), cis, magnitude)
 import Data.Int.Util (ilog2)
 import Data.Qubit (QState(..), (^*), groundState, pureQubit, pureState, qubit, qubits, rawWavefunction, wavefunctionAmplitudes, wavefunctionIndices, wavefunctionOrder)
+import Language.Quil.Types (BitData(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, toBitVector)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (coords, scalar)
 import Test.QuickCheck.All (quickCheckAll)
@@ -324,6 +325,46 @@ prop_gate_cswap =
     && g b101 ~~ b110
     && g b110 ~~ b101
     && g b111 ~~ b111
+
+-- Bit data.
+
+prop_bitdata_bool x =
+  x == boolFromBitVector 0 (toBitVector $ BoolBit x)
+
+prop_bitdata_int8 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ IntBits8 x)
+
+prop_bitdata_int16 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ IntBits16 x)
+
+prop_bitdata_int32 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ IntBits32 x)
+
+prop_bitdata_int64 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ IntBits64 x)
+
+prop_bitdata_word8 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ WordBits8 x)
+
+prop_bitdata_word16 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ WordBits16 x)
+
+prop_bitdata_word32 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ WordBits32 x)
+
+prop_bitdata_word64 x =
+  x == finiteBitsFromBitVector 0 (toBitVector $ WordBits64 x)
+
+prop_bitdata_integer x =
+  x < 0 || x == integerFromBitVector 0 n (toBitVector $ IntegerBits n x)
+    where
+      n = if x == 0 then 1 else fromIntegral (ilog2 x + 1)
+
+prop_bitdata_double x =
+  x == doubleFromBitVector 0 (toBitVector $ DoubleBits x)
+
+prop_bitdata_complex x =
+  x == complexFromBitVector 0 (toBitVector $ ComplexBits x)
 
 
 -- Run tests.

@@ -48,7 +48,7 @@ import qualified Language.Quil.Types as Q (machine)
 runProgramWithStdGen :: StdGen        -- ^ The random number generator.
                      -> Int           -- ^ The number of qubits.
                      -> [BitData]     -- ^ The classical bits.
-                     -> [Instruction] -- ^ The instructions
+                     -> [Instruction] -- ^ The instructions.
                      -> Machine       -- ^ The resulting state of the machine.
 runProgramWithStdGen stdGen n cstate' instructions = runProgram n cstate' instructions `evalRand` stdGen
 
@@ -56,7 +56,7 @@ runProgramWithStdGen stdGen n cstate' instructions = runProgram n cstate' instru
 -- | Run a program, starting from the ground state and using a particular random-number generator.
 runProgramWithStdRandom :: Int           -- ^ The number of qubits.
                         -> [BitData]     -- ^ The classical bits.
-                        -> [Instruction] -- ^ The instructions
+                        -> [Instruction] -- ^ The instructions.
                         -> IO Machine    -- ^ Action for the resulting state of the machine.
 runProgramWithStdRandom n cstate' instructions = evalRandIO $ runProgram n cstate' instructions
 
@@ -65,14 +65,14 @@ runProgramWithStdRandom n cstate' instructions = evalRandIO $ runProgram n cstat
 runProgram :: RandomGen g
            => Int            -- ^ The number of qubits.
            -> [BitData]      -- ^ The classical bits.
-           -> [Instruction]  -- ^ The instructions
+           -> [Instruction]  -- ^ The instructions.
            -> Rand g Machine -- ^ Action for the resulting state of the machine.
 runProgram n cstate' instructions = executeInstructions instructions $ Q.machine n cstate'
 
 
 -- | Execute a series of instructions.
 executeInstructions :: RandomGen g
-                    => [Instruction]  -- ^ The instructions
+                    => [Instruction]  -- ^ The instructions.
                     -> Machine        -- ^ The state of the machine.
                     -> Rand g Machine -- ^ Action for the resulting state of the machine.
 executeInstructions = flip $ foldM (flip executeInstruction)
