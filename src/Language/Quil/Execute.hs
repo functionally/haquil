@@ -29,10 +29,10 @@ module Language.Quil.Execute (
 ) where
 
 
-import Control.Monad (foldM)
+import Control.Monad (foldM, join)
 import Control.Monad.Random.Lazy (Rand, RandomGen, evalRand, evalRandIO)
-import Data.Bits (clearBit, complementBit, setBit, testBit)
-import Data.BitVector (BV)
+import Data.Bits (complementBit, setBit, testBit)
+import Data.BitVector (BV, size)
 import Data.Complex (Complex((:+)))
 import Data.Function (on)
 import Data.Qubit (Operator, Wavefunction, (^*), groundState, measure, qubitsOperator, wavefunctionOrder)
@@ -204,7 +204,13 @@ onBits :: RandomGen g
        => (BV -> BV)     -- ^ The transformation of the bits.
        -> Machine        -- ^ THe machine.
        -> Rand g Machine -- ^ Action for the resulting state of the machine.
-onBits transition machine@Machine{..} = noop machine { cstate = transition cstate }
+onBits transition machine@Machine{..} =
+  let
+    cstate' = transition cstate
+  in
+    if size cstate == size cstate'
+      then noop machine { cstate = transition cstate }
+      else error "Cannot enlarge tne number of classical bits."
 
 
 -- | Set a bit.
@@ -213,7 +219,7 @@ setBit' :: Bool -- ^ The value.
         -> BV   -- ^ The initial bits.
         -> BV   -- ^ The result.
 setBit' True  = flip setBit
-setBit' False = flip clearBit
+setBit' False = flip (join . (complementBit .) . setBit)
 
 
 -- | Compile a gate.

@@ -14,6 +14,7 @@
 -----------------------------------------------------------------------------
 
 
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
@@ -25,14 +26,19 @@ module Main (
 
 
 import Control.Monad (replicateM)
+import Control.Monad.Random.Lazy (evalRandIO)
+import Data.BitVector (BV)
+import Data.Bits (bit, complementBit, setBit, testBit, xor)
 import Data.Complex (Complex(..), cis, magnitude)
 import Data.Int.Util (ilog2)
 import Data.Qubit (QState(..), (^*), groundState, pureQubit, pureState, qubit, qubits, rawWavefunction, wavefunctionAmplitudes, wavefunctionIndices, wavefunctionOrder)
-import Language.Quil.Execute (compileExpression)
-import Language.Quil.Types (BitData(..), Expression(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, toBitVector)
+import Language.Quil.Execute (compileExpression, executeInstruction, runProgramWithStdRandom)
+import Language.Quil.Types (Address, BitData(..), Expression(..), Instruction(..), Machine(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, machine, toBitVector)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (coords, scalar)
 import Test.QuickCheck.All (quickCheckAll)
+import Test.QuickCheck.Monadic (assert, monadicIO, run)
+import Test.QuickCheck.Property (Property)
 import System.Exit (exitFailure, exitSuccess)
 
 import qualified Data.Qubit.Gate as G
@@ -41,6 +47,13 @@ import qualified Data.Vector.Storable as V (toList)
 
 
 -- Helper functions.
+
+clearBit x k =
+  if testBit x k
+    then x `xor` bit k
+    else x
+
+few = (+ 1) . (`mod` 10)
 
 i = scalar $ 0 :+ 1
 
@@ -369,46 +382,121 @@ prop_bitdata_complex x =
   x == complexFromBitVector 0 (toBitVector $ ComplexBits x)
 
 
--- Classical expressions.
+-- Expressions.
 
-prop_classical_power x y =
+prop_expression_power x y =
   x ** y == compileExpression V.empty (Power (Number x) (Number y)) V.empty
 
-prop_classical_times x y =
+prop_expression_times x y =
   x * y == compileExpression V.empty (Times (Number x) (Number y)) V.empty
 
-prop_classical_divide x y =
+prop_expression_divide x y =
   y == 0 || x / y == compileExpression V.empty (Divide (Number x) (Number y)) V.empty
 
-prop_classical_plus x y =
+prop_expression_plus x y =
   x + y == compileExpression V.empty (Plus (Number x) (Number y)) V.empty
 
-prop_classical_minus x y =
+prop_expression_minus x y =
   x - y == compileExpression V.empty (Minus (Number x) (Number y)) V.empty
 
-prop_classical_negate x =
+prop_expression_negate x =
   - x == compileExpression V.empty (Negate $ Number x) V.empty
 
-prop_classical_sin x =
+prop_expression_sin x =
   sin x == compileExpression V.empty (Sin $ Number x) V.empty
 
-prop_classical_cos x =
+prop_expression_cos x =
   cos x == compileExpression V.empty (Cos $ Number x) V.empty
 
-prop_classical_sqrt x =
+prop_expression_sqrt x =
   sqrt x == compileExpression V.empty (Sqrt $ Number x) V.empty
 
-prop_classical_exp x =
+prop_expression_exp x =
   exp x == compileExpression V.empty (Exp $ Number x) V.empty
 
-prop_classical_cis x =
+prop_expression_cis x =
   cis x == compileExpression V.empty (Cis .Number $ x :+ 0) V.empty
 
-prop_classical_number x =
+prop_expression_number x =
   x == compileExpression V.empty (Number x) V.empty
 
-prop_classical_variable x y z w =
+prop_expression_variable x y z w =
   y == compileExpression (V.fromList [x, z]) (Variable x) (V.fromList [y, w])
+
+
+-- Classical bits.
+
+classicalSingle :: (Address -> Instruction) -> (BV -> Int -> BV) -> Integer -> Int -> Property
+classicalSingle g f x k =
+  monadicIO
+    $ do
+      let
+        n = if x <= 0 then 1 else fromIntegral (ilog2 x + 1)
+        k' = k `mod` n
+        m = machine 1 [IntegerBits n x]
+      m' <- run . evalRandIO $ executeInstruction (g k') m
+      assert $ x < 0 || f (cstate m) k' == cstate m'
+
+classicalDouble :: (Address -> Address -> Instruction) -> (BV -> Int -> Int -> BV) -> Integer -> Int -> Int -> Property
+classicalDouble g f x k l =
+  monadicIO
+    $ do
+      let
+        n = if x <= 0 then 1 else fromIntegral (ilog2 x + 1)
+        k' = k `mod` n
+        l' = l `mod` n
+        m = machine 1 [IntegerBits n x]
+      m' <- run . evalRandIO $ executeInstruction (g k' l') m
+      assert $ x < 0 || f (cstate m) k' l' == cstate m'
+
+prop_classical_false =
+  classicalSingle FALSE clearBit
+
+prop_classical_true =
+  classicalSingle TRUE setBit
+
+prop_classical_not =
+  classicalSingle NOT complementBit
+
+prop_classical_and =
+  classicalDouble AND
+    $ \bv k l -> 
+      if testBit bv k && testBit bv l
+        then bv `setBit` l
+        else bv `clearBit` l
+
+
+prop_classical_or =
+  classicalDouble OR
+    $ \bv k l -> 
+      if testBit bv k || testBit bv l
+        then bv `setBit` l
+        else bv `clearBit` l
+
+prop_classical_move =
+  classicalDouble MOVE
+    $ \bv k l -> 
+      if testBit bv k
+        then bv `setBit` l
+        else bv `clearBit` l
+
+prop_classical_exchange =
+  classicalDouble EXCHANGE
+    $ \bv k l -> 
+      case (testBit bv k, testBit bv l) of
+        (False, True ) -> bv `setBit`   k `clearBit` l
+        (True , False) -> bv `clearBit` k `setBit`   l
+        _              -> bv
+
+
+-- Quantum bits.
+
+prop_quantum_reset n =
+  monadicIO
+    $ do
+      let n' = few n
+      Machine{..} <- run $ runProgramWithStdRandom n' [] [RESET]
+      assert $ qstate == groundState n'
 
 
 -- Run tests.

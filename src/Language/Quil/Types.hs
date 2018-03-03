@@ -51,7 +51,7 @@ module Language.Quil.Types (
 
 
 import Data.Binary.IEEE754 (doubleToWord, wordToDouble)
-import Data.BitVector (BV, bitVec, extract, showHex, testBit)
+import Data.BitVector (BV, bitVec, extract, showHex, size, testBit)
 import Data.Bits (FiniteBits(finiteBitSize))
 import Data.Complex (Complex((:+)), imagPart, realPart)
 import Data.Default (Default(def))
@@ -67,7 +67,7 @@ data Machine =
   Machine
   {
     qstate       :: Wavefunction -- ^ The qubits.
-  , cstate       :: BV           -- ^ The classical bits
+  , cstate       :: BV           -- ^ The classical bits.
   , definitions  :: Definitions  -- ^ Definitions of gates and circuits.
   , counter      :: Int          -- ^ The program counter.
   , halted       :: Bool         -- ^ Whether the machine has halted.
@@ -78,7 +78,7 @@ instance Show Machine where
     unlines
       [
         "Quantum state:   " ++ show    qstate
-      , "Classical state: " ++ showHex cstate
+      , "Classical state: " ++ showHex cstate ++ " [" ++ show (size cstate) ++ "]"
       , "Program counter: " ++ show    counter
       , "Halted?          " ++ show    halted
       ]
