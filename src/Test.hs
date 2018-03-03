@@ -28,13 +28,15 @@ import Control.Monad (replicateM)
 import Data.Complex (Complex(..), cis, magnitude)
 import Data.Int.Util (ilog2)
 import Data.Qubit (QState(..), (^*), groundState, pureQubit, pureState, qubit, qubits, rawWavefunction, wavefunctionAmplitudes, wavefunctionIndices, wavefunctionOrder)
-import Language.Quil.Types (BitData(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, toBitVector)
+import Language.Quil.Execute (compileExpression)
+import Language.Quil.Types (BitData(..), Expression(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, toBitVector)
 import Numeric.LinearAlgebra.Array ((.*))
 import Numeric.LinearAlgebra.Array.Util (coords, scalar)
 import Test.QuickCheck.All (quickCheckAll)
 import System.Exit (exitFailure, exitSuccess)
 
 import qualified Data.Qubit.Gate as G
+import qualified Data.Vector as V (empty, fromList)
 import qualified Data.Vector.Storable as V (toList)
 
 
@@ -365,6 +367,48 @@ prop_bitdata_double x =
 
 prop_bitdata_complex x =
   x == complexFromBitVector 0 (toBitVector $ ComplexBits x)
+
+
+-- Classical expressions.
+
+prop_classical_power x y =
+  x ** y == compileExpression V.empty (Power (Number x) (Number y)) V.empty
+
+prop_classical_times x y =
+  x * y == compileExpression V.empty (Times (Number x) (Number y)) V.empty
+
+prop_classical_divide x y =
+  y == 0 || x / y == compileExpression V.empty (Divide (Number x) (Number y)) V.empty
+
+prop_classical_plus x y =
+  x + y == compileExpression V.empty (Plus (Number x) (Number y)) V.empty
+
+prop_classical_minus x y =
+  x - y == compileExpression V.empty (Minus (Number x) (Number y)) V.empty
+
+prop_classical_negate x =
+  - x == compileExpression V.empty (Negate $ Number x) V.empty
+
+prop_classical_sin x =
+  sin x == compileExpression V.empty (Sin $ Number x) V.empty
+
+prop_classical_cos x =
+  cos x == compileExpression V.empty (Cos $ Number x) V.empty
+
+prop_classical_sqrt x =
+  sqrt x == compileExpression V.empty (Sqrt $ Number x) V.empty
+
+prop_classical_exp x =
+  exp x == compileExpression V.empty (Exp $ Number x) V.empty
+
+prop_classical_cis x =
+  cis x == compileExpression V.empty (Cis .Number $ x :+ 0) V.empty
+
+prop_classical_number x =
+  x == compileExpression V.empty (Number x) V.empty
+
+prop_classical_variable x y z w =
+  y == compileExpression (V.fromList [x, z]) (Variable x) (V.fromList [y, w])
 
 
 -- Run tests.

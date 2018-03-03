@@ -230,7 +230,7 @@ compileGate parameters expressions indices arguments =
 -- | Compile an expression.
 compileExpression :: Parameters -- ^ The formal parameters.
                   -> Expression -- ^ The expression.
-                  -> Arguments  -- ^ The argument.
+                  -> Arguments  -- ^ The arguments.
                   -> Number     -- ^ The result.
 compileExpression parameters (Power  x y) = \z -> ((**) `on` flip (compileExpression parameters) z) x y
 compileExpression parameters (Times  x y) = \z -> ((*)  `on` flip (compileExpression parameters) z) x y
