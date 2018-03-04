@@ -219,7 +219,7 @@ setBit' :: Bool -- ^ The value.
         -> BV   -- ^ The initial bits.
         -> BV   -- ^ The result.
 setBit' True  = flip setBit
-setBit' False = flip (join . (complementBit .) . setBit)
+setBit' False = flip (join . (complementBit .) . setBit) -- See <https://bwbush.atlassian.net/browse/HQUIL-7>.
 
 
 -- | Compile a gate.

@@ -33,9 +33,10 @@ import Data.Complex (Complex(..), cis, magnitude)
 import Data.Int.Util (ilog2)
 import Data.Qubit (QState(..), (^*), groundState, pureQubit, pureState, qubit, qubits, rawWavefunction, wavefunctionAmplitudes, wavefunctionIndices, wavefunctionOrder)
 import Language.Quil.Execute (compileExpression, executeInstruction, runProgramWithStdRandom)
-import Language.Quil.Types (Address, BitData(..), Expression(..), Instruction(..), Machine(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, machine, toBitVector)
+import Language.Quil.Types (Address, BitData(..), Expression(..), Instruction(..), Machine(..), Parameter(..), boolFromBitVector, complexFromBitVector, doubleFromBitVector, finiteBitsFromBitVector, integerFromBitVector, machine, toBitVector)
 import Numeric.LinearAlgebra.Array ((.*))
-import Numeric.LinearAlgebra.Array.Util (coords, scalar)
+import Numeric.LinearAlgebra.Array.Util (asScalar, coords, scalar)
+import Numeric.LinearAlgebra.Tensor (switch)
 import Test.QuickCheck.All (quickCheckAll)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
 import Test.QuickCheck.Property (Property)
@@ -48,7 +49,9 @@ import qualified Data.Vector.Storable as V (toList)
 
 -- Helper functions.
 
-clearBit x k =
+p = Expression . Number
+
+clearBit x k = -- See <https://bwbush.atlassian.net/browse/HQUIL-7>.
   if testBit x k
     then x `xor` bit k
     else x
@@ -70,6 +73,11 @@ infix 4 ~~
 
 (~~~) = (and .) . zipWith (\x y -> magnitude (x - y) <= epsilon)
 
+(~=~) x y =
+  let
+    z = rawWavefunction x - rawWavefunction y
+  in
+    magnitude (asScalar  $ z * switch z) < epsilon
 
 -- Wavefunction tests.
 
@@ -497,6 +505,74 @@ prop_quantum_reset n =
       let n' = few n
       Machine{..} <- run $ runProgramWithStdRandom n' [] [RESET]
       assert $ qstate == groundState n'
+
+prop_quantum_one =
+  monadicIO
+    $ do
+      Machine{..} <-
+        run
+          $ runProgramWithStdRandom 1 [IntBits8 0]
+          [
+            RX (p $ pi/2) 0
+          , T 0
+          , H 0
+          , S 0
+          , RY (p 0.2) 0
+          , I 0
+          , PHASE (p 0.3) 0
+          ]
+      assert $ qstate ~=~ qubits [
+                                    0.8845856219   :+ (-0.3664073617)
+                                 , (-0.2872987275) :+   0.0267088763
+                                 ]
+
+prop_quantum_two =
+  monadicIO
+    $ do
+      Machine{..} <-
+        run
+          $ runProgramWithStdRandom 2 [IntBits8 0]
+          [
+            RX (p $ pi/2) 0
+          , T 1
+          , H 0
+          , S 0
+          , RY (p 0.2) 1
+          , I 0
+          , PHASE (p 0.3) 0
+          ]
+      assert $ qstate ~=~ qubits [
+                                     0.4975020826  :+ (-0.4975020826)
+                                 , (-0.6223038112) :+   0.3282599747
+                                 ,   0.0499167083  :+ (-0.0499167083)
+                                 , (-0.0624386488) :+   0.0329358569
+                                 ]
+
+prop_quantum_three =
+  monadicIO
+    $ do
+      Machine{..} <-
+        run
+          $ runProgramWithStdRandom 2 [IntBits8 0]
+          [
+            RX (p 0.1) 0
+          , RY (p 0.2) 1
+          , H 0
+          , RZ (p 0.3) 2
+          , PSWAP (p 0.4) 2 1
+          , CSWAP 1 0 2
+          , H 1
+          ]
+      assert $ qstate ~=~ qubits [
+                                   0.4875851636 :+ (-0.0988384058)
+                                 , 0.4950166445 :+ (-0.0496673327)
+                                 , 0.4875851636 :+ (-0.0988384058)
+                                 , 0.4950166445 :+ (-0.0496673327)
+                                 , 0.0489216975 :+   0.009916919
+                                 , 0.0476872529 :+   0.014751396
+                                 , 0.0489216975 :+   0.009916919
+                                 , 0.0476872529 :+   0.014751396
+                                 ]
 
 
 -- Run tests.
