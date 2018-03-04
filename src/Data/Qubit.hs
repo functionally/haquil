@@ -53,7 +53,7 @@ module Data.Qubit (
 
 
 import Control.Arrow (first, second)
-import Control.Monad (replicateM)
+import Control.Monad (ap, mapM, replicateM)
 import Control.Monad.Random.Class (fromList)
 import Control.Monad.Random.Lazy (Rand, RandomGen)
 import Data.Complex (Complex(..), magnitude)
@@ -62,8 +62,8 @@ import Data.Int.Util (ilog2, isqrt)
 import Data.List (elemIndex, groupBy, intersect, intercalate, sortBy)
 import Data.Maybe (catMaybes)
 import Numeric.LinearAlgebra.Array ((.*))
-import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, reorder)
-import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), listTensor, switch)
+import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, setType)
+import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), contrav, listTensor, switch)
 
 import qualified Data.Vector.Storable as V (toList)
 
@@ -90,10 +90,23 @@ names :: Tensor a -> [String]
 names = fmap iName . dims
 
 
--- | Prefixes for 'Tensor' indices.
-indexPrefix :: Variant -> Char
-indexPrefix Contra = 'm'
-indexPrefix Co     = 'n'
+-- | Prefixes for 'Tensor' variants.
+variantPrefix :: Variant -> Char
+variantPrefix Contra = 'm'
+variantPrefix Co     = 'n'
+
+
+-- | 'Tensor' variants for index prefixes.
+prefixVariant :: String -> Variant
+prefixVariant ('m' : _) = Contra
+prefixVariant ('n' : _) = Co
+prefixVariant _         = error "Unexpected index."
+
+
+prefixDimension :: String -> Int
+prefixDimension ('m' : _) = 2
+prefixDimension ('n' : _) = -2
+prefixDimension _         = error "Unexpected index."
 
 
 -- | 'Tensor' index for a collection of qubits.
@@ -108,7 +121,7 @@ indexLabels variant indices =
         Contra -> 0
         Co     -> n
   in
-    zipWith (\k v -> (show k, indexPrefix variant : show v)) [(1+o)..] $ reverse indices
+    zipWith (\k v -> (show k, variantPrefix variant : show v)) [(1+o)..] $ reverse indices
 
 
 -- | 'Tensor' index for a wavefunction.
@@ -132,6 +145,7 @@ showAmplitude :: Amplitude -> String
 showAmplitude (a :+ b)
   | b == 0    = show a
   | a == 0    = show b ++ "i"
+  | b <  0    = "(" ++ show a ++        show b ++ "i)"
   | otherwise = "(" ++ show a ++ "+" ++ show b ++ "i)"
 
 
@@ -164,18 +178,32 @@ tensorIndices :: Tensor Amplitude -- ^ The tensor.
               -> [QIndex]         -- ^ The qubit indices.
 tensorIndices =
   fmap (read . tail)
-    . filter ((== indexPrefix Contra) . head)
+    . filter ((== variantPrefix Contra) . head)
     . names
 
 
 -- | Transpose a tensor to canonical order.
 canonicalOrder :: Tensor Amplitude -> Tensor Amplitude
 canonicalOrder x =
-  let
+  let -- See <https://bwbush.atlassian.net/browse/HQUIL-9>.
+    n = order x
     f (v : i) (v' : i') = (v, - read i :: Int) `compare` (v', - read i')
     f _ _ = undefined
+    ns = names x
+    ns' = sortBy f ns
+    Just permutation = (mapM . flip elemIndex) ns ns'
+    permute y = map (y !!) permutation
+    x' =
+      renameExplicit (zip (show <$> ([1..] :: [Int])) ns')
+        . listTensor (prefixDimension <$> ns')
+        . fmap snd
+        . sortBy (compare `on` fst)
+        . fmap (first permute)
+        . zip (replicateM n [(minBound::QState)..maxBound])
+        . V.toList
+       $ coords x
   in
-    reorder (sortBy f $ names x) x
+    foldl (flip $ ap setType prefixVariant) (contrav x') ns'
 
 
 -- | Amplitudes in a tensor.
@@ -231,7 +259,7 @@ qubit :: QIndex                 -- ^ The index of the qubit in the wavefunction.
       -> Wavefunction           -- ^ The wavefunction for the qubit.
 qubit index (a0, a1) =
   Wavefunction
-    . renameExplicit [("1", indexPrefix Contra : show index)]
+    . renameExplicit [("1", variantPrefix Contra : show index)]
     $ listTensor [2] [a0, a1]
 
 
@@ -345,8 +373,8 @@ qubitsOperator indices =
 mult :: Tensor Amplitude -> Tensor Amplitude -> Tensor Amplitude
 mult x y =
   let
-    lft  = filter ((== indexPrefix Co    ) . head) $ names x
-    rght = filter ((== indexPrefix Contra) . head) $ names y
+    lft  = filter ((== variantPrefix Co    ) . head) $ names x
+    rght = filter ((== variantPrefix Contra) . head) $ names y
     cmmn = fmap tail lft `intersect` fmap tail rght
     x' = renameExplicit [(i, '@' : tail i) | i <- filter ((`elem` cmmn) . tail) lft ] x
     y' = renameExplicit [(i, '@' : tail i) | i <- filter ((`elem` cmmn) . tail) rght] y
