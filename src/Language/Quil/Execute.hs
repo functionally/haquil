@@ -10,6 +10,33 @@
 --
 -- | Executing Quil programs.
 --
+-- This example makes measurements on a prepared state.
+--
+-- > >>> import Language.Quil.Execute
+-- > >>> import Language.Quil.Types
+-- >
+-- > -- Run a simple program and examine the quantum and classical states..
+-- > >>> let program = [H 0, CNOT 0 1, RX (Expression . Number $ pi/4) 1]
+-- > >>> runProgramWithStdRandom 2 [BoolBit False] program
+-- > Quantum state:   0.6532814824381882|00> + -0.27059805007309845i|01> + -0.27059805007309845i|10> + 0.6532814824381882|11> @ [1,0]
+-- > Classical state: 0x0 [1]
+-- > Program counter: 3
+-- > Halted?          False
+-- >
+-- > -- Add measurement to the program and re-run it.
+-- > >>> let program' = program ++ [MEASURE 0 (Just 0)]
+-- > >>> runProgramWithStdRandom 2 [BoolBit False] program'
+-- > Quantum state:   1.0986841134678098|00> + -0.4550898605622273i|10> @ [1,0]
+-- > Classical state: 0x0 [1]
+-- > Program counter: 4
+-- > Halted?          False
+-- >
+-- > -- Run the program again.
+-- > >>> runProgramWithStdRandom 2 [BoolBit False] program'
+-- > Quantum state:   -0.4550898605622273i|01> + 1.0986841134678098|11> @ [1,0]
+-- > Classical state: 0x1 [1]
+-- > Program counter: 4
+-- > Halted?          False
 -----------------------------------------------------------------------------
 
 

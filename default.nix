@@ -4,7 +4,7 @@
 }:
 mkDerivation {
   pname = "haquil";
-  version = "0.2.1.5";
+  version = "0.2.1.14";
   src = ./.;
   libraryHaskellDepends = [
     base bv data-binary-ieee754 data-default hTensor MonadRandom random vector

@@ -1,7 +1,7 @@
 { mkDerivation, fetchgit, base, containers, hmatrix, random, stdenv }:
 mkDerivation {
   pname = "hTensor";
-  version = "0.9.1";
+  version = "0.9.1patched";
   src = fetchgit {
     url             = "https://github.com/albertoruiz/hTensor.git";
     rev             = "cb97b02941d0e2c5e864afefe3f6313e46d4a9fa";

@@ -9,7 +9,34 @@
 -- Portability :  Portable
 --
 -- | Qubits and operations on them, using the indexing conventions of \<<https://arxiv.org/abs/1711.02086/>\>.
---
+-- 
+-- The example below creates a wavefunction for the [Bell state](https://en.wikipedia.org/wiki/Bell_state) and then performs a measurement on its highest qubit.
+-- 
+-- > >>> import Control.Monad.Random (evalRandIO)
+-- > >>> import Data.Qubit ((^^*), groundState, measure)
+-- > >>> import Data.Qubit.Gate (h, cnot)
+-- >
+-- > -- Construct the Bell state.
+-- > >>> let bell = [h 0, cnot 0 1] ^^* groundState 2
+-- > >>> bell
+-- > 0.7071067811865475|00> + 0.7071067811865475|11> @ [1,0]
+-- >
+-- > -- Measure the Bell wavefunction.
+-- > >>> bell' <- evalRandIO $ measure [1] bell
+-- > >>> bell'
+-- > ([(1,0)],1.0|00> @ [1,0])
+-- >
+-- > -- Measure it again.
+-- > >>> evalRandIO $ measure [1] bell'
+-- > ([(1,0)],1.0|00> @ [1,0])
+-- >
+-- > -- Measure another Bell wavefunction.
+-- > >>> evalRandIO $ measure [1] bell
+-- > ([(1,0)],1.0|00> @ [1,0])
+-- >
+-- > -- Measure another Bell wavefunction.
+-- > >>> evalRandIO $ measure [1] bell
+-- > ([(1,1)],1.0|11> @ [1,0])
 -----------------------------------------------------------------------------
 
 
@@ -56,16 +83,16 @@ import Control.Arrow (first, second)
 import Control.Monad (ap, mapM, replicateM)
 import Control.Monad.Random.Class (fromList)
 import Control.Monad.Random.Lazy (Rand, RandomGen)
-import Data.Complex (Complex(..), magnitude)
+import Data.Complex (Complex(..), conjugate, magnitude)
 import Data.Function (on)
 import Data.Int.Util (ilog2, isqrt)
 import Data.List (elemIndex, groupBy, intersect, intercalate, sortBy)
 import Data.Maybe (catMaybes)
 import Numeric.LinearAlgebra.Array ((.*))
-import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, reorder, setType)
+import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, mapArray, order, outers, renameExplicit, reorder, setType)
 import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), contrav, listTensor, switch)
 
-import qualified Data.Vector.Storable as V (toList)
+import qualified Data.Vector.Storable as V (map, toList)
 
 
 -- | States of a quibit.
@@ -461,7 +488,7 @@ project states x =
         ]
     z = p .* y
   in
-    Wavefunction $ z / sqrt (z * switch z)
+    Wavefunction $ z / sqrt (mapArray (V.map conjugate) z * switch z)
 
 
 -- | Measure qubits in a wavefunction.
@@ -480,4 +507,4 @@ measure indices x =
 -- | The total probability for the wave function, which should be 1.
 wavefunctionProbability :: Wavefunction
                         -> Amplitude
-wavefunctionProbability (Wavefunction x) = asScalar $ x * switch x
+wavefunctionProbability (Wavefunction x) = asScalar $ mapArray (V.map conjugate) x * switch x

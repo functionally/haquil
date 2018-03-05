@@ -13,7 +13,7 @@ This example creates a wavefunction for the [Bell state](https://en.wikipedia.or
 
 	> import Control.Monad.Random (evalRandIO)
 	> import Data.Qubit ((^^*), groundState, measure)
-	> import Data.Qubit.Gate (H, CNOT)
+	> import Data.Qubit.Gate (h, cnot)
 	
 	> -- Construct the Bell state.
 	> let bell = [h 0, cnot 0 1] ^^* groundState 2
