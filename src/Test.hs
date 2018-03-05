@@ -611,6 +611,15 @@ prop_quantum_four =
                                  ,   0
                                  ]
 
+prop_quantum_measure =
+  monadicIO
+    $ do
+      Machine{..} <-
+        run
+          $ runProgramWithStdRandom 2 [IntBits8 0] [H 0, CNOT 0 1, MEASURE 1 (Just 2)]
+      assert $  cstate == toBitVector (IntBits8 0) && qstate ~=~ qubits [1, 0, 0, 0]
+             || cstate == toBitVector (IntBits8 4) && qstate ~=~ qubits [0, 0, 0, 1]
+
 
 -- Run tests.
 
