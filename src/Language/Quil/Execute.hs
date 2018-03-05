@@ -26,14 +26,14 @@
 -- > -- Add measurement to the program and re-run it.
 -- > >>> let program' = program ++ [MEASURE 0 (Just 0)]
 -- > >>> runProgramWithStdRandom 2 [BoolBit False] program'
--- > Quantum state:   1.0986841134678098|00> + -0.4550898605622273i|10> @ [1,0]
+-- > Quantum state:   0.9238795325112867|00> + -0.3826834323650897i|10> @ [1,0]
 -- > Classical state: 0x0 [1]
 -- > Program counter: 4
 -- > Halted?          False
 -- >
 -- > -- Run the program again.
 -- > >>> runProgramWithStdRandom 2 [BoolBit False] program'
--- > Quantum state:   -0.4550898605622273i|01> + 1.0986841134678098|11> @ [1,0]
+-- > Quantum state:   -0.3826834323650897i|01> + 0.9238795325112867|11> @ [1,0]
 -- > Classical state: 0x1 [1]
 -- > Program counter: 4
 -- > Halted?          False
