@@ -553,7 +553,7 @@ prop_quantum_three =
     $ do
       Machine{..} <-
         run
-          $ runProgramWithStdRandom 2 [IntBits8 0]
+          $ runProgramWithStdRandom 3 [IntBits8 0]
           [
             RX (p 0.1) 0
           , RY (p 0.2) 1

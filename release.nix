@@ -7,7 +7,8 @@ let
         packages = pkgs.haskell.packages // {
           "${compiler}" = pkgs.haskell.packages."${compiler}".override {
             overrides = haskellPackagesNew: haskellPackagesOld: rec {
-              haquil = haskellPackagesNew.callPackage ./default.nix { };
+              hTensor = haskellPackagesNew.callPackage ./hTensor.nix { };
+              haquil  = haskellPackagesNew.callPackage ./default.nix { };
             };
           };
         };

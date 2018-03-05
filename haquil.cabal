@@ -1,5 +1,5 @@
 name               : haquil
-version            : 0.2.1.10
+version            : 0.2.1.11
 synopsis           : A Haskell implementation of the Quil instruction set for quantum computing.
 description        : This Haskell library implements the Quil language for quantum computing, as specified in "A Practical Quantum Instruction Set Architecture" \<https:\/\/arxiv.org\/abs\/1608.03355\/\>.
 
@@ -37,7 +37,7 @@ library
                    , bv                  >= 0.4.1
                    , data-binary-ieee754 >= 0.4.4
                    , data-default        >= 0.7.1
-                   , hTensor             >= 0.9.1
+                   , hTensor             >  0.9.1
                    , MonadRandom         >= 0.5.1
                    , random              >= 1.1
                    , vector              >= 0.12.0

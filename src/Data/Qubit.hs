@@ -62,7 +62,7 @@ import Data.Int.Util (ilog2, isqrt)
 import Data.List (elemIndex, groupBy, intersect, intercalate, sortBy)
 import Data.Maybe (catMaybes)
 import Numeric.LinearAlgebra.Array ((.*))
-import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, setType)
+import Numeric.LinearAlgebra.Array.Util (Idx(iName), asScalar, coords, dims, order, outers, renameExplicit, reorder, setType)
 import Numeric.LinearAlgebra.Tensor (Tensor, Variant(..), contrav, listTensor, switch)
 
 import qualified Data.Vector.Storable as V (toList)
@@ -161,16 +161,16 @@ showTensor :: (a -> Tensor Amplitude) -- ^ Function for extracting the tensor of
            -> a                       -- ^ What to show.
            -> String                  -- ^ The string respresentation.
 showTensor toTensor format x =
-    let
-      x' = canonicalOrder $ toTensor x
-      n = order x'
-    in
-      (++ (show $ tensorIndices x'))
-      . (++ " @ ")
-      . intercalate " + "
-        . fmap (format n)
-        . filter ((/= 0) . snd)
-        $ tensorAmplitudes x'
+  let
+    x' = canonicalOrder $ toTensor x
+    n = order x'
+  in
+    (++ (show $ tensorIndices x'))
+    . (++ " @ ")
+    . intercalate " + "
+      . fmap (format n)
+      . filter ((/= 0) . snd)
+      $ tensorAmplitudes x'
 
 
 -- | Indices in a tensor.
@@ -185,26 +185,32 @@ tensorIndices =
 -- | Transpose a tensor to canonical order.
 canonicalOrder :: Tensor Amplitude -> Tensor Amplitude
 canonicalOrder x =
-  let -- See <https://bwbush.atlassian.net/browse/HQUIL-9>.
-    n = order x
-    f (v : i) (v' : i') = (v, - read i :: Int) `compare` (v', - read i')
-    f _ _ = undefined
-    ns = names x
-    ns' = sortBy f ns
-    Just permutation = (mapM . flip elemIndex) ns ns'
-    permute y = map (y !!) permutation
-    x' =
-      renameExplicit (zip (show <$> ([1..] :: [Int])) ns')
-        . listTensor (prefixDimension <$> ns')
-        . fmap snd
-        . sortBy (compare `on` fst)
-        . fmap (first permute)
-        . zip (replicateM n [(minBound::QState)..maxBound])
-        . V.toList
-       $ coords x
-  in
-    foldl (flip $ ap setType prefixVariant) (contrav x') ns'
-
+  if False
+    then let -- See <https://bwbush.atlassian.net/browse/HQUIL-9>.
+           n = order x
+           f (v : i) (v' : i') = (v, - read i :: Int) `compare` (v', - read i')
+           f _ _ = undefined
+           ns = names x
+           ns' = sortBy f ns
+           Just permutation = (mapM . flip elemIndex) ns ns'
+           permute y = map (y !!) permutation
+           x' =
+             renameExplicit (zip (show <$> ([1..] :: [Int])) ns')
+               . listTensor (prefixDimension <$> ns')
+               . fmap snd
+               . sortBy (compare `on` fst)
+               . fmap (first permute)
+               . zip (replicateM n [(minBound::QState)..maxBound])
+               . V.toList
+              $ coords x
+         in
+           foldl (flip $ ap setType prefixVariant) (contrav x') ns'
+    else let
+           f (v : i) (v' : i') = (v, - read i :: Int) `compare` (v', - read i')
+           f _ _ = undefined
+         in
+           reorder (sortBy f $ names x) x
+ 
 
 -- | Amplitudes in a tensor.
 tensorAmplitudes :: Tensor Amplitude        -- ^ The tensor.
