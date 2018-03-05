@@ -574,6 +574,43 @@ prop_quantum_three =
                                  , 0.0476872529 :+   0.014751396
                                  ]
 
+prop_quantum_four =
+  monadicIO
+    $ do
+      Machine{..} <-
+        run
+          $ runProgramWithStdRandom 4 [IntBits8 0]
+          [
+            CPHASE00 (p 0.1) 0 1
+          , H 3
+          , CPHASE01 (p 0.2) 2 3
+          , CCNOT 3 0 1
+          , CPHASE10 (p 0.3) 2 1
+          , ISWAP 3 2
+          , PHASE (p 0.5) 3
+          , CPHASE (p 0.4) 3 0
+          , Z 3
+          , CZ 1 3
+          ]
+      assert $ qstate ~=~ qubits [
+                                     0.7035741926  :+ 0.0705928859 -- |0000>
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 , (-0.2089643421) :+ 0.6755249098 -- |0100>
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ,   0
+                                 ]
+
 
 -- Run tests.
 
